@@ -6,6 +6,17 @@
 
 We propose a new LLM-powered Multi-Agent System (LLM-MAS) benchmark, Collab-Overcooked, built on the popular Overcooked-AI game with more applicable and challenging tasks in interactive environments. Collab-Overcooked extends existing benchmarks from two novel perspectives. First, it provides a multi-agent framework supporting diverse tasks and objectives and encourages collaboration through natural language communication. Second, it introduces a spectrum of process-oriented evaluation metrics to assess the fine-grained collaboration capabilities of different LLM agents, a dimension often overlooked in prior work.
 
+## ⚠️ Upcoming Code Restructure for Improved Clarity
+We're preparing to restructure our code to significantly improve its readability and logical organization (expected to take 1-2 months). This update is designed to make it much simpler for researchers to follow and understand.
+
+Important points for you:
+
+- No impact on current experiments: This update will not affect any experimental results. If you're currently testing with Collab-Overcooked, you can continue using it without interruption.
+
+- For incremental work: If you plan to build incrementally on Collab-Overcooked and have questions about the current code, please pay close attention to our upcoming updates.
+
+We believe these changes will greatly enhance your experience working with our codebase!
+
 ## Getting Started
 
 ### Install
