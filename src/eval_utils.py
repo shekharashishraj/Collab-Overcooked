@@ -1259,6 +1259,7 @@ class Evaluation:
         return []
 
     def evaluate_collaboration(self, save_dir):
+        os.makedirs(save_dir, exist_ok=True)
         confusion_matrix = [[[0, 0], [0, 0]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]]
         process_result = [[]]
 

@@ -80,7 +80,11 @@ def main(variant):
 
                     #print(eval.evaluate(variant['save_dir']))
                     try:
-                        eval.evaluate(variant['save_dir']+ '/' + variant['model'] + '/' + variant['order'])
+                        save_dir = os.path.join(
+                            variant["save_dir"], variant["model"], variant["order"]
+                        )
+                        os.makedirs(save_dir, exist_ok=True)
+                        eval.evaluate(save_dir)
                     except Exception as e:
                         print(f"[evaluation] Evaluation failed ({variant['model']}/{variant['order']}): {e}")
                         raise
