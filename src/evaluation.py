@@ -27,14 +27,40 @@ def main(variant):
             auto_order_list = []
             if variant['order'] == 'AUTO':
                 exp_log = ExpLog(variant['log_dir'] + '/' + variant['model'])
+                if exp_log.__len__() == 0:
+                    print(
+                        f"[evaluation] No evaluable logs found: missing experiment_*.json under {variant['log_dir']}/{variant['model']}"
+                    )
+                    return
                 for idx in range(exp_log.__len__()):
                     auto_order_list.append(exp_log.get_secondary_order_list(idx, 0)[0])
                 eval = Evaluation(order_name_list=auto_order_list,exp_log=exp_log)
             else:
                 exp_log = ExpLog(variant['log_dir']+ '/' + variant['model'] + '/' + variant['order'])
+                if exp_log.__len__() == 0:
+                    print(
+                        f"[evaluation] No evaluable logs found: missing experiment_*.json under {variant['log_dir']}/{variant['model']}/{variant['order']}"
+                    )
+                    return
                 for idx in range(exp_log.__len__()):
                     auto_order_list.append(variant['order'])
                 eval = Evaluation(order_name_list=auto_order_list,exp_log=exp_log)
+
+            # NOTE: In fix_task mode we used to only construct Evaluation, but never call evaluate().
+            # Keep behavior consistent with build_in mode: write results into the corresponding log directory.
+            if variant.get("save", True):
+                if variant["order"] == "AUTO":
+                    save_dir = os.path.join(variant["save_dir"], variant["model"])
+                else:
+                    save_dir = os.path.join(
+                        variant["save_dir"], variant["model"], variant["order"]
+                    )
+                os.makedirs(save_dir, exist_ok=True)
+                try:
+                    eval.evaluate(save_dir)
+                except Exception as e:
+                    print(f"[evaluation] Evaluation failed: {e}")
+                    raise
 
         if variant['test_mode'] == 'build_in':
             for model in models:
@@ -43,12 +69,21 @@ def main(variant):
                     variant['model'] = model
                     variant['order'] = order
                     exp_log = ExpLog(variant['log_dir']+ '/' + variant['model'] + '/' + variant['order'])
+                    if exp_log.__len__() == 0:
+                        print(
+                            f"[evaluation] Skip: no experiment_*.json under {variant['log_dir']}/{variant['model']}/{variant['order']}"
+                        )
+                        continue
                     for idx in range(exp_log.__len__()):
                         auto_order_list.append(variant['order'])
                     eval = Evaluation(order_name_list=auto_order_list,exp_log=exp_log)
 
                     #print(eval.evaluate(variant['save_dir']))
-                    eval.evaluate(variant['log_dir']+ '/' + variant['model'] + '/' + variant['order'])
+                    try:
+                        eval.evaluate(variant['save_dir']+ '/' + variant['model'] + '/' + variant['order'])
+                    except Exception as e:
+                        print(f"[evaluation] Evaluation failed ({variant['model']}/{variant['order']}): {e}")
+                        raise
 
 
 
@@ -65,13 +100,11 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='exp', choices=['exp', 'develop'], help='exp mode run step-by-step, demo mode run via traj')                                
     parser.add_argument('--test_mode', type=str, default='fix_task', choices=['fix_task', 'build_in'])
     parser.add_argument('--save', type=boolean_argument, default=True, help='Whether save the result')
-    parser.add_argument('--log_dir', type=str, default='eval_result', help='dir to save result')
+    parser.add_argument('--log_dir', type=str, default='data', help='dir to read experiment logs from')
     parser.add_argument('--debug', type=boolean_argument, default=True, help='debug mode')
     parser.add_argument('--order', type=str,default='AUTO', help='1 task order name, "AUTO" represents automatic recognition')
     parser.add_argument('--recipe_dir', type=str, default='prompts/recipe', help='The dir of the recipe and reference')
-
-    #
-    parser.add_argument('--save_dir', type=str, default='eval_result', help='save directory of LLM statistics')
+    parser.add_argument('--save_dir', type=str, default='eval_result', help='dir to write evaluation results to')
 
 
     args = parser.parse_args()
