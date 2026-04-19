@@ -81,10 +81,10 @@ def main(variant):
     start_time = time.time()
     results = []
 
-    actor_num = 0
     actor_list = ['chef','assistant']
-    for i in range(episode):  
-        
+    for i in range(episode):
+
+        actor_num = 0
         agents_list = []
 
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
