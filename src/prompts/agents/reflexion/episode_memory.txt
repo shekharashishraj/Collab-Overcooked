@@ -1,0 +1,4 @@
+REFLEXION MEMORY:
+The following are short reflections from previous episodes in this run. Treat them as durable lessons; prefer strategies that worked and avoid repeated mistakes.
+
+{memory_block}

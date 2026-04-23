@@ -147,6 +147,15 @@ class LLMAgents(LLMPair):
         turn_statistics_dict_cp = copy.deepcopy(turn_statistics_dict)
         self.turn_statistics_dict = turn_statistics_dict_cp
         # self.generate_layout_prompt()
+        self.agent_type = "baseline"
+
+    def on_planner_response(self, response, state):
+        """Subclass hook after a planner LLM response is received (before parsing)."""
+        pass
+
+    def _hook_after_teammate_ml_record(self, state):
+        """Subclass hook after teammate ml_actions are appended for this timestep."""
+        pass
 
     def set_mdp(self, mdp: OvercookedGridworld):
         self.mdp = mdp
@@ -606,6 +615,7 @@ class LLMAgents(LLMPair):
                     "action": state.ml_actions[1 - self.agent_index],
                 }
             )
+        self._hook_after_teammate_ml_record(state)
 
         # if current ml action does not exist, generate a new one
         if self.current_ml_action is None:
@@ -1325,8 +1335,15 @@ class LLMAgents(LLMPair):
         else:
             role = "Assistant"
         if mode == "analysis":
-            pattern = f"(?:{role})\s+analysis\s*:?\s*(.*?)\s*(?:{role})\s+plan:"
-            match = re.findall(pattern, response, re.DOTALL | re.IGNORECASE)
+            # Optional partner_prediction block (ProAgent / AToM) before analysis
+            pattern_with_pred = rf"(?:{role})\s+partner_prediction\s*:.*?(?:{role})\s+analysis\s*:?\s*(.*?)\s*(?:{role})\s+plan:"
+            pattern_plain = f"(?:{role})\s+analysis\s*:?\s*(.*?)\s*(?:{role})\s+plan:"
+            if re.search(rf"(?:{role})\s+partner_prediction\s*:", response, re.IGNORECASE):
+                match = re.findall(
+                    pattern_with_pred, response, re.DOTALL | re.IGNORECASE
+                )
+            else:
+                match = re.findall(pattern_plain, response, re.DOTALL | re.IGNORECASE)
             if match:
                 return match[0]
             if need_correct:
@@ -1520,6 +1537,7 @@ class LLMAgents(LLMPair):
                 map=self.mdp.state_string(self.state).replace("ø", "o"),
             )
             print(response)
+            self.on_planner_response(response, state)
             # check whether need communication
             # check whether has the plan
             communicate_response, _ = self.parse_response(response, "talk")

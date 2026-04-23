@@ -1,0 +1,3 @@
+Output discipline for partner modeling:
+- Keep {role} partner_prediction on a single paragraph before {role} analysis.
+- Name a specific ML action string when possible (same vocabulary as {role} plan).

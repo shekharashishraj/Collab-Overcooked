@@ -55,7 +55,12 @@ def last_say(says: List[str]) -> str:
         if s.upper() != "[NOTHING]": return trunc(s, 140)
     return ""
 
-def timestep_row(e: Dict[str, Any], src: str) -> Dict[str, Any]:
+def timestep_row(
+    e: Dict[str, Any],
+    src: str,
+    p0_agent_type: str = "",
+    p1_agent_type: str = "",
+) -> Dict[str, Any]:
     acts = e.get("actions") or []
     inner = e.get("content") or {}
     sd = e.get("statistical_data") or {}
@@ -65,7 +70,24 @@ def timestep_row(e: Dict[str, Any], src: str) -> Dict[str, Any]:
     s0, p0 = collect_say_plan(inner, 0)
     s1, p1 = collect_say_plan(inner, 1)
     ms = e.get("agent_models") or []
-    row: Dict[str, Any] = {"source_file": src, "timestep": e.get("timestamp"), "order": (e.get("order_list") or [""])[0], "score": sd.get("score", 0), "p0_action": acts[0] if acts else "", "p1_action": acts[1] if len(acts) > 1 else "", "scene_snippet": scene_snip(inner.get("observation") or []), "p0_last_llm_say": last_say(s0), "p1_last_llm_say": last_say(s1), "p0_last_plan": trunc(p0[-1], 150) if p0 else "", "p1_last_plan": trunc(p1[-1], 150) if p1 else "", "p0_model": ms[0].get("model","") if ms else "", "p1_model": ms[1].get("model","") if len(ms)>1 else ""}
+    row: Dict[str, Any] = {
+        "source_file": src,
+        "timestep": e.get("timestamp"),
+        "order": (e.get("order_list") or [""])[0],
+        "score": sd.get("score", 0),
+        "p0_action": acts[0] if acts else "",
+        "p1_action": acts[1] if len(acts) > 1 else "",
+        "scene_snippet": scene_snip(inner.get("observation") or []),
+        "p0_last_llm_say": last_say(s0),
+        "p1_last_llm_say": last_say(s1),
+        "p0_last_plan": trunc(p0[-1], 150) if p0 else "",
+        "p1_last_plan": trunc(p1[-1], 150) if p1 else "",
+        "p0_model": ms[0].get("model", "") if ms else "",
+        "p1_model": ms[1].get("model", "") if len(ms) > 1 else "",
+        "p0_agent_type": p0_agent_type or (ms[0].get("agent_type", "") if ms else ""),
+        "p1_agent_type": p1_agent_type
+        or (ms[1].get("agent_type", "") if len(ms) > 1 else ""),
+    }
     for i in (0, 1):
         c = comm[i] if i < len(comm) else {}
         turns = c.get("turn") or []
@@ -86,7 +108,41 @@ def timestep_row(e: Dict[str, Any], src: str) -> Dict[str, Any]:
         row[f"p{i}_fmt_corr_tokens"] = int(sum(fc))
     return row
 
-COLS = ["source_file","timestep","order","score","p0_action","p1_action","p0_llm_calls","p1_llm_calls","p0_comm_tokens","p1_comm_tokens","p0_comm_turns","p1_comm_turns","p0_comm_digest","p1_comm_digest","p0_format_err","p1_format_err","p0_validator_err","p1_validator_err","p0_validator_msg","p1_validator_msg","p0_val_corr_tokens","p1_val_corr_tokens","p0_fmt_corr_tokens","p1_fmt_corr_tokens","p0_last_llm_say","p1_last_llm_say","p0_last_plan","p1_last_plan","p0_model","p1_model","scene_snippet"]
+COLS = [
+    "source_file",
+    "timestep",
+    "order",
+    "score",
+    "p0_action",
+    "p1_action",
+    "p0_llm_calls",
+    "p1_llm_calls",
+    "p0_comm_tokens",
+    "p1_comm_tokens",
+    "p0_comm_turns",
+    "p1_comm_turns",
+    "p0_comm_digest",
+    "p1_comm_digest",
+    "p0_format_err",
+    "p1_format_err",
+    "p0_validator_err",
+    "p1_validator_err",
+    "p0_validator_msg",
+    "p1_validator_msg",
+    "p0_val_corr_tokens",
+    "p1_val_corr_tokens",
+    "p0_fmt_corr_tokens",
+    "p1_fmt_corr_tokens",
+    "p0_last_llm_say",
+    "p1_last_llm_say",
+    "p0_last_plan",
+    "p1_last_plan",
+    "p0_model",
+    "p1_model",
+    "p0_agent_type",
+    "p1_agent_type",
+    "scene_snippet",
+]
 
 def _agents_models(agents: Any) -> Tuple[str, str]:
     if isinstance(agents, list):
@@ -104,6 +160,22 @@ def _agents_models(agents: Any) -> Tuple[str, str]:
     return "", ""
 
 
+def _agents_agent_types(agents: Any) -> Tuple[str, str]:
+    if isinstance(agents, list):
+        t0 = t1 = ""
+        for a in agents:
+            if not isinstance(a, dict):
+                continue
+            if a.get("player") == "P0" or a.get("index") == 0:
+                t0 = str(a.get("agent_type", "") or "")
+            if a.get("player") == "P1" or a.get("index") == 1:
+                t1 = str(a.get("agent_type", "") or "")
+        return t0, t1
+    if isinstance(agents, dict):
+        return str(agents.get("p0_agent_type", "")), str(agents.get("p1_agent_type", ""))
+    return "", ""
+
+
 def run_summary(data: Dict[str, Any], src: str) -> Dict[str, Any]:
     order = ""
     for e in data.get("content") or []:
@@ -112,6 +184,7 @@ def run_summary(data: Dict[str, Any], src: str) -> Dict[str, Any]:
     sc = data.get("total_score", 0)
     stamps = data.get("total_timestamp") or []
     p0m, p1m = _agents_models(data.get("agents"))
+    p0t, p1t = _agents_agent_types(data.get("agents"))
     p0v = p1v = p0f = p1f = ct = calls = 0
     for e in data.get("content") or []:
         sd = e.get("statistical_data") or {}
@@ -122,7 +195,26 @@ def run_summary(data: Dict[str, Any], src: str) -> Dict[str, Any]:
             ve = (er.get("validator_error") or {}).get("error_num", 0)
             if i==0: p0f += fe; p0v += ve
             elif i==1: p1f += fe; p1v += ve
-    return {"source_file": src, "order": order, "order_level": order_level(order), "success": bool(fin) or int(sc)>0, "total_score": sc, "orders_finished": ";".join(fin), "num_timesteps": len(stamps), "last_timestep": max(stamps) if stamps else -1, "total_comm_tokens": ct, "total_llm_comm_calls": calls, "sum_p0_validator_errors": p0v, "sum_p1_validator_errors": p1v, "sum_p0_format_errors": p0f, "sum_p1_format_errors": p1f, "p0_model": p0m, "p1_model": p1m}
+    return {
+        "source_file": src,
+        "order": order,
+        "order_level": order_level(order),
+        "success": bool(fin) or int(sc) > 0,
+        "total_score": sc,
+        "orders_finished": ";".join(fin),
+        "num_timesteps": len(stamps),
+        "last_timestep": max(stamps) if stamps else -1,
+        "total_comm_tokens": ct,
+        "total_llm_comm_calls": calls,
+        "sum_p0_validator_errors": p0v,
+        "sum_p1_validator_errors": p1v,
+        "sum_p0_format_errors": p0f,
+        "sum_p1_format_errors": p1f,
+        "p0_model": p0m,
+        "p1_model": p1m,
+        "p0_agent_type": p0t,
+        "p1_agent_type": p1t,
+    }
 
 def expand(ps: Iterable[str]) -> List[str]:
     out = []
@@ -157,7 +249,11 @@ def main():
     for path in paths:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         src = str(Path(path).resolve())
-        tr = [timestep_row(e, src) for e in data.get("content") or []]
+        p0t, p1t = _agents_agent_types(data.get("agents"))
+        tr = [
+            timestep_row(e, src, p0_agent_type=p0t, p1_agent_type=p1t)
+            for e in data.get("content") or []
+        ]
         allr.extend(tr); sums.append(run_summary(data, src))
         if a.csv_out:
             stem = Path(path).stem; d = Path(a.csv_out)
