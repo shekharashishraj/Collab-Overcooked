@@ -18,6 +18,7 @@ import copy
 
 from rich import print as rprint
 from collab.modules import if_two_sentence_similar_meaning
+from .llm_providers import infer_provider
 
 cwd = os.getcwd()
 openai_key_file = os.path.join(cwd, "openai_key.txt")
@@ -32,6 +33,9 @@ NAME_TO_ACTION = {
     "STAY": Action.STAY,
 }
 
+# Filled at end of P1's LLMAgents.action() each env step (chef, assistant planner lists).
+last_joint_timestep_planner_dialogues = [[], []]
+
 
 class LLMPair(object):
 
@@ -40,11 +44,15 @@ class LLMPair(object):
         model="gpt-3.5-turbo-0301",
         model_dirname="~/",
         local_server_api="http://localhost:8000/v1",
+        openai_base_url=None,
+        anthropic_max_tokens=4096,
     ):
         self.agent_index = None
         self.model = model
         self.model_dirname = model_dirname
         self.local_server_api = local_server_api
+        self.openai_base_url = openai_base_url
+        self.anthropic_max_tokens = int(anthropic_max_tokens)
 
         self.openai_api_keys = []
         self.load_openai_keys()
@@ -91,9 +99,15 @@ class LLMAgents(LLMPair):
         debug_mode="N",
         agent_index=None,
         outdir=None,
+        openai_base_url=None,
+        anthropic_max_tokens=4096,
     ):
         super().__init__(
-            model=model, model_dirname=model_dirname, local_server_api=local_server_api
+            model=model,
+            model_dirname=model_dirname,
+            local_server_api=local_server_api,
+            openai_base_url=openai_base_url,
+            anthropic_max_tokens=anthropic_max_tokens,
         )
 
         self.trace = True
@@ -140,7 +154,11 @@ class LLMAgents(LLMPair):
     def create_gptmodule(
         self, module_name, file_type="txt", retrival_method="recent_k", K=10
     ):
-        print(f"\n--->Initializing GPT {module_name}<---\n")
+        prov = infer_provider(self.model)
+        print(
+            f"\n--->Initializing planner module={module_name} | "
+            f"P{self.agent_index} {self.name} | model={self.model} | provider={prov}<---\n"
+        )
 
         model_name = "gpt"
         if module_name == "planner":
@@ -165,6 +183,8 @@ class LLMAgents(LLMPair):
             self.local_server_api,
             retrival_method,
             K,
+            openai_base_url=self.openai_base_url,
+            anthropic_max_tokens=self.anthropic_max_tokens,
         )
 
     # 	return messages
@@ -569,8 +589,10 @@ class LLMAgents(LLMPair):
         self.teammate.order = state.current_k_order[0]
         self.order = state.current_k_order[0]
         self.change_communication_role("ask", "answer")
-        self.planner.dialog_history_list = []
-        self.teammate.planner.dialog_history_list = []
+        # Chef (P0) starts a fresh planner scratch each step. Do not clear assistant here:
+        # chef-initiated communication appends to assistant.planner before assistant.action().
+        if self.agent_index == 0:
+            self.planner.dialog_history_list = []
         # check if the teammate has finsihed his action
         if self.teammate.current_ml_action_steps > 0:
             current_ml_action_done = self.teammate.check_current_ml_action_done(state)
@@ -663,10 +685,28 @@ class LLMAgents(LLMPair):
         self.turn_statistics_dict["timestamp"] = self.current_timestep
         self.turn_statistics_dict["order_list"] = state.current_k_order
         self.turn_statistics_dict["actions"].append(self.current_ml_action)
-        # save statistic data
-        # del history
-        self.planner.dialog_history_list = []
-        self.teammate.planner.dialog_history_list = []
+        # Snapshot planner dialogues once per env step (after P1's pass), then clear both.
+        # Chef's pass only clears chef planner so assistant-side history survives until P1 runs.
+        global last_joint_timestep_planner_dialogues
+        if self.agent_index == 1:
+            if hasattr(self.teammate, "planner"):
+                chef, assistant = self.teammate, self
+                last_joint_timestep_planner_dialogues[0] = copy.deepcopy(
+                    chef.planner.dialog_history_list
+                )
+                last_joint_timestep_planner_dialogues[1] = copy.deepcopy(
+                    assistant.planner.dialog_history_list
+                )
+                chef.planner.dialog_history_list = []
+                assistant.planner.dialog_history_list = []
+            else:
+                last_joint_timestep_planner_dialogues[0] = []
+                last_joint_timestep_planner_dialogues[1] = copy.deepcopy(
+                    self.planner.dialog_history_list
+                )
+                self.planner.dialog_history_list = []
+        elif self.agent_index == 0:
+            self.planner.dialog_history_list = []
 
         self.trace = True
 
@@ -1440,7 +1480,11 @@ class LLMAgents(LLMPair):
                         )
             state_prompt += failure_message
 
-            print(f"\n\n### Observation module to " + self.name + "\n")
+            prov = infer_provider(self.model)
+            print(
+                f"\n\n### LLM observation | P{self.agent_index} {self.name} | "
+                f"model={self.model} | provider={prov}\n"
+            )
 
             send_message = self.message_formate_control(
                 "asker",
@@ -1462,8 +1506,12 @@ class LLMAgents(LLMPair):
                 state_message["content"]
             )
 
-            print(f"\n\n\n### GPT Planner module\n")
-            print("====== GPT Query ======")
+            prov = infer_provider(self.model)
+            print(
+                f"\n\n\n### LLM planner | P{self.agent_index} {self.name} | "
+                f"model={self.model} | provider={prov}\n"
+            )
+            print(f"====== LLM query | model={self.model} | provider={prov} ======")
             response, tokens_num = self.planner.query(
                 key=self.openai_api_key(),
                 proxy=self.proxy,

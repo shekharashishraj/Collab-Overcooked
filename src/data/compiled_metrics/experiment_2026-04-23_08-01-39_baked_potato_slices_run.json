@@ -1,0 +1,20 @@
+[
+  {
+    "source_file": "/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/gpt-4o__claude-sonnet-4-20250514/baked_potato_slices/experiment_2026-04-23_08-01-39_baked_potato_slices.json",
+    "order": "baked_potato_slices",
+    "order_level": "level_2",
+    "success": true,
+    "total_score": 20,
+    "orders_finished": "baked_potato_slices",
+    "num_timesteps": 25,
+    "last_timestep": 24,
+    "total_comm_tokens": 7857,
+    "total_llm_comm_calls": 13,
+    "sum_p0_validator_errors": 4,
+    "sum_p1_validator_errors": 1,
+    "sum_p0_format_errors": 0,
+    "sum_p1_format_errors": 0,
+    "p0_model": "gpt-4o",
+    "p1_model": "claude-sonnet-4-20250514"
+  }
+]
