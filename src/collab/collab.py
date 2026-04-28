@@ -91,6 +91,7 @@ class LLMAgents(LLMPair):
         debug_mode="N",
         agent_index=None,
         outdir=None,
+        prompt_subdir="gpt",
     ):
         super().__init__(
             model=model, model_dirname=model_dirname, local_server_api=local_server_api
@@ -122,6 +123,7 @@ class LLMAgents(LLMPair):
         self.action_wait_parse = queue.Queue()
         self.end_talk = False
         self.actor = actor
+        self.prompt_subdir = prompt_subdir
         self.name = "Chef" if self.actor == "chef" else "Assistant"
         self.communication_role = "ask"
         self.recipe = {}
@@ -142,7 +144,7 @@ class LLMAgents(LLMPair):
     ):
         print(f"\n--->Initializing GPT {module_name}<---\n")
 
-        model_name = "gpt"
+        model_name = self.prompt_subdir
         if module_name == "planner":
             prompt_file = os.path.join(
                 PROMPT_DIR,
@@ -169,7 +171,7 @@ class LLMAgents(LLMPair):
 
     # 	return messages
     def load_prompt_file(self, mode="origin"):
-        self.prompt_dir = PROMPT_DIR + "/gpt"
+        self.prompt_dir = PROMPT_DIR + "/" + self.prompt_subdir
         prompt = ""
         with open(self.prompt_dir + "/prompt.txt", "r") as g:
             prompt = g.read()
@@ -200,14 +202,25 @@ class LLMAgents(LLMPair):
         with open(self.prompt_dir + f"/{self.actor}_skill.txt", "r") as g:
             skill = g.read()
             prompt = prompt.replace("{skill}", skill)
-        chef_workflow = """- The usual workflow for the chef is:
+        if self.prompt_subdir == "gpt_open":
+            chef_workflow = """- The usual workflow for the chef in this open kitchen is:
+  1. Read the cooking process from your recipe. All decisions must be strictly guided by the recipe.
+  2. Decide whether to do the steps yourself or delegate (via `request(...)`) to the assistant. In this open kitchen you have full access to all utensils, dispensers, and the serving location, so either solo or shared completion is valid. Choose what minimizes total time.
+  3. Run any work in parallel with the assistant when delegation is faster, otherwise do the steps yourself. If you have nothing to do, you can wait.
+  4. Serve the dish (optional). If the recipe specifies a plate, use `fill_dish_with_food(utensil_name)` first; otherwise pick up the food directly from the utensil.
+  5. Use `deliver_soup()`."""
+            assistant_workflow = """The usual workflow for the Assistant in this open kitchen is:
+- 1. Ask the Chef for the recipe / order details (you do not see the recipe directly).
+- 2. You have full access to all utensils, dispensers, and the serving location. You can perform any step yourself, or coordinate with Chef via counter handoffs or `request(...)` calls. Choose whichever is faster."""
+        else:
+            chef_workflow = """- The usual workflow for the chef is:
   1. Read the cooking process from your recipe. All of your decisions must be strictly guided by the recipe and should not lead to unfounded behavior.
   2. Ask the assistant to pick up ingredients from the ingredient dispenser and use the correct utensil to handle them according to the recipe. Since you do not have access to all the objects, you need to assign some tasks to the assistant while you perform other tasks in parallel.
   3. Work in parallel with the assistant to finish the order in the shortest time possible, unless there is nothing you can do in the current situation. If you have nothing to do, you can wait.
   4. Serve the dish (optional). If the recipe specifies that the dish needs to be served on a plate, you must use `fill_dish_with_food(utensil_name)` to serve the dish from the utensil first; otherwise, just pick up the food from the utensil.
   5. Use `deliver_soup()."""
-        assistant_workflow = """The usual workflow for the Assistant is:  
-- 1. Ask the Chef for guidance, since you do not have the recipe and need the Chef to help you plan.  
+            assistant_workflow = """The usual workflow for the Assistant is:
+- 1. Ask the Chef for guidance, since you do not have the recipe and need the Chef to help you plan.
 - 2. Follow the Chef’s instructions unless they are incorrect. For example, if the Chef requests a utensil that is not available on your side, you should refuse and inform him. """
         #  -1. Communicate with the chef for instruction and don't make your own plans.\n\
         #  -2. Follow the instructions given by Chef unless his instruction is wrong. For example, if the utensil he wants you to use in not in your side, you should refuse and tell him.\n"
@@ -272,7 +285,6 @@ class LLMAgents(LLMPair):
         return self.mdp.state_string(state).replace("ø", "o")
 
     def generate_layout_prompt(self):
-        layout_prompt = f"Chef space:"
         if self.name == "Chef":
             utensil_list_chef = self.mdp.utensil_list_chef
             utensil_list_assistant = self.teammate.mdp.utensil_list_assist
@@ -280,6 +292,16 @@ class LLMAgents(LLMPair):
             utensil_list_chef = self.teammate.mdp.utensil_list_chef
             utensil_list_assistant = self.mdp.utensil_list_assist
 
+        # If both agents have the same utensil access, render a shared-space description
+        if set(utensil_list_chef) == set(utensil_list_assistant) and len(utensil_list_chef) > 0:
+            layout_prompt = "Shared space:"
+            for u in utensil_list_chef:
+                layout_prompt += u + "  "
+            layout_prompt += "counter  dish_dispenser  ingredient_dispenser\n"
+            layout_prompt += "Both Chef and Assistant have full access to all utensils, dispensers, the counter, and the serving location.\n"
+            return layout_prompt
+
+        layout_prompt = "Chef space:"
         for u in utensil_list_chef:
             layout_prompt += u + "  "
         layout_prompt += "counter \n"

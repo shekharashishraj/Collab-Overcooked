@@ -1,0 +1,38 @@
+{
+    "reference_1":
+    {
+        "agent_0": [
+            "pickup(mushroom, counter)",
+            "put_obj_in_utensil(pot0)",
+            "cook(pot0)",
+            "pickup(boiled_mushroom,pot0)",
+            "deliver_soup()"
+        ],
+        "agent_1": [
+            "pickup(mushroom, ingredient_dispenser)",
+            "place_obj_on_counter()"
+        ]
+    },
+    "reference_2":
+    {
+        "agent_0": [
+            "pickup(mushroom, ingredient_dispenser)",
+            "put_obj_in_utensil(pot0)",
+            "cook(pot0)",
+            "pickup(boiled_mushroom,pot0)",
+            "deliver_soup()"
+        ],
+        "agent_1": []
+    },
+    "reference_3":
+    {
+        "agent_0": [],
+        "agent_1": [
+            "pickup(mushroom, ingredient_dispenser)",
+            "put_obj_in_utensil(pot0)",
+            "cook(pot0)",
+            "pickup(boiled_mushroom,pot0)",
+            "deliver_soup()"
+        ]
+    }
+}
