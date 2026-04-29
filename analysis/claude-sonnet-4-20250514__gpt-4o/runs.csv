@@ -1,0 +1,2 @@
+run_id,file_stem,source_path,order,order_level,success,total_score,horizon_len,p0_model,p1_model,p0_agent_type,p1_agent_type
+a82f5e57a5ad62e4,experiment_2026-04-23_08-22-19_baked_potato_slices,/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/claude-sonnet-4-20250514__gpt-4o/baked_potato_slices/experiment_2026-04-23_08-22-19_baked_potato_slices.json,baked_potato_slices,level_2,True,20,27,claude-sonnet-4-20250514,gpt-4o,,

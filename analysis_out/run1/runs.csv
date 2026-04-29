@@ -1,0 +1,2 @@
+run_id,file_stem,source_path,order,order_level,success,total_score,horizon_len,p0_model,p1_model,p0_agent_type,p1_agent_type
+2c7db8c619bae899,experiment_2026-04-23_09-12-32_boiled_egg,/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/a-tom_gpt-4o__a-tom_claude-sonnet-4-20250514/boiled_egg/experiment_2026-04-23_09-12-32_boiled_egg.json,boiled_egg,level_1,True,20,16,gpt-4o,claude-sonnet-4-20250514,a-tom,a-tom

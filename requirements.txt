@@ -1,4 +1,5 @@
 openai==1.54.3
+anthropic>=0.40.0,<1.0.0
 blobfile
 fairscale
 pandas # with default numpy==1.21.6

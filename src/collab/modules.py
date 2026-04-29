@@ -25,9 +25,19 @@ from .llm_providers import (
     extract_human_port_response,
 )
 
-cwd = os.getcwd()
-gpt4_key_file = os.path.join(cwd, "openai_key.txt")
-# deepseek_key_file = os.path.join(cwd, "deepseek_key.txt")
+_src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_key_src = os.path.join(_src_dir, "openai_key.txt")
+_key_cwd = os.path.join(os.getcwd(), "openai_key.txt")
+if os.path.isfile(_key_src):
+    gpt4_key_file = _key_src
+elif os.path.isfile(_key_cwd):
+    gpt4_key_file = _key_cwd
+else:
+    raise FileNotFoundError(
+        "openai_key.txt not found. Expected it at "
+        f"{_key_src} (next to the collab package) or {_key_cwd}."
+    )
+# deepseek_key_file = os.path.join(_src_dir, "deepseek_key.txt")
 
 with open(gpt4_key_file, "r") as f:
     context = f.read()

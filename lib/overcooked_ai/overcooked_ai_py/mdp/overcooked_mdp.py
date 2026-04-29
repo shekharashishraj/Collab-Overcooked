@@ -1037,7 +1037,6 @@ class OvercookedGridworld(object):
 
         # Resolve interacts first
         sparse_reward, shaped_reward = self.resolve_interacts(new_state, joint_action, parm) ## I add the ml_actions feature through this fun
-        print(new_state.ml_actions)
         assert new_state.player_positions == state.player_positions
         assert new_state.player_orientations == state.player_orientations
 
@@ -1064,6 +1063,14 @@ class OvercookedGridworld(object):
         Currently if two players both interact with a terrain, we resolve player 1's interact 
         first and then player 2's, without doing anything like collision checking.
         """
+        n_players = len(new_state.players)
+        if parm is None:
+            parm = [None] * n_players
+        else:
+            parm = list(parm)
+            while len(parm) < n_players:
+                parm.append(None)
+
         pot_states = self.get_pot_states(new_state) # print(self.state_string(new_state)) # can use to check current state
         ready_pots = pot_states["ingredient"]["ready"]
         cooking_pots = ready_pots + pot_states["ingredient"]["cooking"]

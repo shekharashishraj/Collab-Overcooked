@@ -20,9 +20,30 @@ from rich import print as rprint
 from collab.modules import if_two_sentence_similar_meaning
 from .llm_providers import infer_provider
 
-cwd = os.getcwd()
-openai_key_file = os.path.join(cwd, "openai_key.txt")
-PROMPT_DIR = os.path.join(cwd, "prompts")
+_collab_dir = os.path.dirname(os.path.abspath(__file__))
+_src_dir = os.path.dirname(_collab_dir)
+_prompts_src = os.path.join(_src_dir, "prompts")
+_prompts_cwd = os.path.join(os.getcwd(), "prompts")
+if os.path.isdir(_prompts_src):
+    PROMPT_DIR = _prompts_src
+elif os.path.isdir(_prompts_cwd):
+    PROMPT_DIR = _prompts_cwd
+else:
+    raise FileNotFoundError(
+        "prompts directory not found. Expected at "
+        f"{_prompts_src} or {_prompts_cwd}."
+    )
+_key_src = os.path.join(_src_dir, "openai_key.txt")
+_key_cwd = os.path.join(os.getcwd(), "openai_key.txt")
+if os.path.isfile(_key_src):
+    openai_key_file = _key_src
+elif os.path.isfile(_key_cwd):
+    openai_key_file = _key_cwd
+else:
+    raise FileNotFoundError(
+        "openai_key.txt not found. Expected at "
+        f"{_key_src} or {_key_cwd}."
+    )
 
 NAME_TO_ACTION = {
     "NORTH": Direction.NORTH,

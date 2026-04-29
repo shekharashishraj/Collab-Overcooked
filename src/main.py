@@ -1,6 +1,7 @@
 import time
 import datetime
 import os
+import sys
 import json
 import datetime
 import re
@@ -14,6 +15,11 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1" 
 work_dir = os.getcwd()
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_local_overcooked = os.path.join(_repo_root, "lib", "overcooked_ai")
+if os.path.isdir(os.path.join(_local_overcooked, "overcooked_ai_py")):
+    sys.path.insert(0, _local_overcooked)
+
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -41,7 +47,18 @@ def check_recipe_parse(variant):
 import importlib_metadata
 VERSION = importlib_metadata.version("overcooked_ai")
 cwd = os.getcwd()
-PROMPT_DIR = os.path.join(cwd, "prompts")
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_prompts_src = os.path.join(_script_dir, "prompts")
+_prompts_cwd = os.path.join(cwd, "prompts")
+if os.path.isdir(_prompts_src):
+    PROMPT_DIR = _prompts_src
+elif os.path.isdir(_prompts_cwd):
+    PROMPT_DIR = _prompts_cwd
+else:
+    raise FileNotFoundError(
+        "prompts directory not found. Expected at "
+        f"{_prompts_src} or {_prompts_cwd}."
+    )
 print(f'\n----This overcook version is {VERSION}----\n')
 
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld, OvercookedState

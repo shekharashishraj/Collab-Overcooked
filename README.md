@@ -41,6 +41,7 @@ We recommend using the anaconda management environment. Python 3.8 is recommende
 ### Quick Test
 The easiest way to test whether the environment is installed correctly is to use gpt-3.5-turbo to test after filling in the openai api secret key. 
 - Fill in the OpenAI API key at `Collab-Overcooked/src/openai_key.txt`
+- For **Anthropic (Claude)** models on P0 or P1, set `ANTHROPIC_API_KEY` in the environment or put the key in `Collab-Overcooked/src/anthropic_key.txt` (first line).
 - Run the following commands
   ```
   cd Collab-Overcooked/src
@@ -62,7 +63,12 @@ Example commands:
 cd Collab-Overcooked/src
 
 # (Optional) Run an episode to generate experiment logs (saved under ./data by default)
-python main.py --order boiled_egg --gpt_model gpt-4o 
+python main.py --order boiled_egg --gpt_model gpt-4o
+
+# Per-player models (P0 = chef, P1 = assistant): e.g. GPT-4o + Claude Sonnet
+python main.py --order boiled_egg --model_p0 gpt-4o --model_p1 claude-sonnet-4-20250514 --horizon 5
+
+# Logs use a folder name derived from both model ids; evaluation `--model` should match that segment or your chosen save path.
 
 # Evaluate a single task: reads logs from ./data and writes results to ./eval_result by default
 python evaluation.py --test_mode fix_task --model gpt-4o --order boiled_egg

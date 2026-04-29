@@ -1,0 +1,463 @@
+run_id,timestep,actions_0,actions_1,map,score,order_list,validator_err_0,validator_err_1,format_err_0,format_err_1,first_validator_msg_0,first_validator_msg_1,scene_raw_p0,scene_raw_p1,chef_holds,asst_holds,chef_queue_str,asst_queue_str,pot_line,delta_chef_holds,delta_asst_holds,delta_pot_line,chef_queue_len,asst_queue_len,delta_chef_queue_len,delta_asst_queue_len,comm_tokens_p0,comm_tokens_p1,waste_3b_near_duplicate_say,directive_lex_score,waste_3c_validator_after_directive,waste_3d_late_talk,waste_3a_both_wait_no_scene,waste_3a_nothing_high_tokens,waste_score
+1057013ede0059e7,0,wait(1),"pickup(potato, ingredient_dispenser)","X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       ↑1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 0: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,,<pot0> is empty,True,True,True,0,0,0.0,0.0,610.0,0.0,0,2,0,0,0,1,1
+1057013ede0059e7,1,wait(1),"pickup(potato, ingredient_dispenser)","X       X       X       P       X       
+
+I       ↑1      X       ↑0      X       
+
+C               X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 1: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [pickup(potato, ingredient_dispenser); put_obj_in_utensil(chopping_board0)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,"pickup(potato, ingredient_dispenser); put_obj_in_utensil(chopping_board0)",<pot0> is empty,False,False,False,0,2,0.0,2.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,2,wait(3),"pickup(potato, ingredient_dispenser)","X       X       X       P       X       
+
+I       ←1      X       ↑0      X       
+
+C               X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 2: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [pickup(potato, ingredient_dispenser); put_obj_in_utensil(chopping_board0)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,"pickup(potato, ingredient_dispenser); put_obj_in_utensil(chopping_board0)",<pot0> is empty,False,False,False,0,2,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,3,wait(3),put_obj_in_utensil(chopping_board0),"X       X       X       P       X       
+
+I       ←1p     X       ↑0      X       
+
+C               X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,0.0,-2.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,4,wait(3),put_obj_in_utensil(chopping_board0),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       ↓1p     X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,False,False,False,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,5,wait(1),put_obj_in_utensil(chopping_board0),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       ←1p     X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 1 partner completions: 1/1 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 5: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds one potato. The planned sequence of actions (yet to be performed) for Assistant is [put_obj_in_utensil(chopping_board0)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,one potato,,put_obj_in_utensil(chopping_board0),<pot0> is empty,True,True,True,0,1,0.0,1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,6,wait(1),cut(chopping_board0),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C-      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 2 partner completions: 2/2 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 6: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> has potato, which are all the ingredients you need to make potato_slices; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,,<pot0> is empty,False,True,False,0,0,0.0,-1.0,539.0,0.0,0,0,0,0,0,1,1
+1057013ede0059e7,7,wait(2),wait(2),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C1      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 3 partner completions: 3/3 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 7: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> starts processing chopped_onion,it will be ready after 2 timesteps; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,,<pot0> is empty,False,False,False,0,0,0.0,0.0,614.0,0.0,0,2,0,0,0,1,1
+1057013ede0059e7,8,wait(2),wait(2),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C2      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,9,wait(1),wait(5),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C3      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,1,0,0,0,"chef can not reach the destination.Please check if the destination is in your space.Please check if you can interact it. You can let your teammate pick the ingredient from utensil and put in on the counter, then pick up ingredient from the counter.
+
+",,"[ToM feedback]
+Your partner-prediction accuracy over the last 3 partner completions: 3/3 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 9: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [pickup(potato_slices, chopping_board0)] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> has potato_slices; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+
+Below are the failed and analysis history about your last chosed action,you can use the information to reach correct action alone AND DO NOT COMMUNICATE WITH YOUR TEAMMATE :
+Your action pickup(potato_slices, chopping_board0) raised an error: chef can not reach the destination.Please check if the destination is in your space.Please check if you can interact it. You can let your teammate pick the ingredient from utensil and put in on the counter, then pick up ingredient from the counter.
+
+
+","Successful Action History: [{'timestamp': 3, 'action': 'pickup(potato, ingredient_dispenser)'}, {'timestamp': 6, 'action': 'put_obj_in_utensil(chopping_board0)'}, {'timestamp': 7, 'action': 'cut(chopping_board0)'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 9: <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> has potato_slices; 3 counters can be visited by <Assistant>. Their states are as follows: counters have nothing.
+",nothing,nothing,"pickup(potato_slices, chopping_board0)",,<pot0> is empty,True,True,True,1,0,1.0,0.0,0.0,621.0,0,1,0,0,0,1,1
+1057013ede0059e7,10,wait(1),wait(5),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C3      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,1,0,0,0,"chef can not reach the destination.Please check if the destination is in your space.Please check if you can interact it. You can let your teammate pick the ingredient from utensil and put in on the counter, then pick up ingredient from the counter.
+
+",,"[ToM feedback]
+Your partner-prediction accuracy over the last 3 partner completions: 3/3 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 10: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [pickup(potato_slices, chopping_board0)] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [wait(5)] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> has potato_slices; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+
+Below are the failed and analysis history about your last chosed action,you can use the information to reach correct action alone AND DO NOT COMMUNICATE WITH YOUR TEAMMATE :
+Your action pickup(potato_slices, chopping_board0) raised an error: chef can not reach the destination.Please check if the destination is in your space.Please check if you can interact it. You can let your teammate pick the ingredient from utensil and put in on the counter, then pick up ingredient from the counter.
+
+
+",,nothing,nothing,"pickup(potato_slices, chopping_board0)",wait(5),<pot0> is empty,False,False,False,1,1,0.0,1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,11,wait(3),"pickup(potato_slices, chopping_board0)","X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C3      ←1      X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,1,0,0,0,"There is no potato_slices on counter chef can visited.If assistant is already preparing ingredient for you,you should wait.
+
+",,"[ToM feedback]
+Your partner-prediction accuracy over the last 3 partner completions: 3/3 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 11: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [pickup(potato_slices, counter)] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [wait(5);pickup(potato_slices, chopping_board0);place_obj_on_counter()] Kitchen states: <pot0> is empty; <oven0> is empty; <blender0> is empty; <chopping_board0> has potato_slices; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+
+Below are the failed and analysis history about your last chosed action,you can use the information to reach correct action alone AND DO NOT COMMUNICATE WITH YOUR TEAMMATE :
+Your action pickup(potato_slices, counter) raised an error: There is no potato_slices on counter chef can visited.If assistant is already preparing ingredient for you,you should wait.
+
+
+",,nothing,nothing,"pickup(potato_slices, counter)","wait(5);pickup(potato_slices, chopping_board0);place_obj_on_counter()",<pot0> is empty,False,False,False,1,3,0.0,2.0,554.0,0.0,0,3,0,0,0,1,1
+1057013ede0059e7,12,wait(3),place_obj_on_counter(),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       ←1p     X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,-1.0,-3.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,13,wait(3),place_obj_on_counter(),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       →1p     X               X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,False,False,False,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,14,"pickup(potato_slices, counter)",wait(5),"X       X       X       P       X       
+
+I               X       ↑0      X       
+
+C       →1      Xp              X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 5 partner completions: 3/5 correct.
+
+Successful Action History: []
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 14: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Chef>. Their states are as follows: 1 counters have potato_slices which you can pick it up. 
+","Successful Action History: [{'timestamp': 3, 'action': 'pickup(potato, ingredient_dispenser)'}, {'timestamp': 6, 'action': 'put_obj_in_utensil(chopping_board0)'}, {'timestamp': 7, 'action': 'cut(chopping_board0)'}, {'timestamp': 12, 'action': 'pickup(potato_slices, chopping_board0)'}, {'timestamp': 14, 'action': 'place_obj_on_counter()'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 14: <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [pickup(potato_slices, counter);put_obj_in_utensil(oven0);bake(oven0)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Assistant>. Their states are as follows: 1 counters have potato_slices which you can pick it up. 
+",nothing,nothing,,,<pot0> is empty,True,True,True,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,15,"pickup(potato_slices, counter)",wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      Xp      ↓0      X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,16,"pickup(potato_slices, counter)",wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      Xp      ←0      X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,False,False,False,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,17,put_obj_in_utensil(oven0),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X       ←0p     X       
+
+D               X               O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,False,False,False,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,18,put_obj_in_utensil(oven0),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       ↓0p     O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,False,False,False,0,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,19,put_obj_in_utensil(oven0),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0p     O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 1 partner completions: 1/1 correct.
+
+Successful Action History: [{'timestamp': 3, 'action': 'pickup(potato, ingredient_dispenser)'}, {'timestamp': 6, 'action': 'put_obj_in_utensil(chopping_board0)'}, {'timestamp': 7, 'action': 'cut(chopping_board0)'}, {'timestamp': 12, 'action': 'pickup(potato_slices, chopping_board0)'}, {'timestamp': 14, 'action': 'place_obj_on_counter()'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 19: <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] <Chef> holds one potato_slices. The planned sequence of actions (yet to be performed) for Chef is [put_obj_in_utensil(oven0);bake(oven0)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Assistant>. Their states are as follows: counters have nothing.
+",one potato_slices,nothing,put_obj_in_utensil(oven0);bake(oven0),,<pot0> is empty,True,True,True,2,0,2.0,0.0,0.0,575.0,0,0,0,0,0,1,1
+1057013ede0059e7,20,bake(oven0),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0      O-      
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,-2.0,0.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,21,wait(2),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0      O1      
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 5 partner completions: 3/5 correct.
+
+Successful Action History: [{'timestamp': 17, 'action': 'pickup(potato_slices, counter)'}, {'timestamp': 20, 'action': 'put_obj_in_utensil(oven0)'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 21: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [wait(5)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <blender0> is empty; <oven0> starts processing chopped_onion,it will be ready after 2 timesteps; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,wait(5),<pot0> is empty,True,True,True,0,1,0.0,1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,22,wait(2),wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0      O2      
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,,,,,,,True,True,True,0,0,0.0,-1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,23,"pickup(baked_potato_slices, oven0)",wait(5),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0      O3      
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 5 partner completions: 3/5 correct.
+
+Successful Action History: [{'timestamp': 17, 'action': 'pickup(potato_slices, counter)'}, {'timestamp': 20, 'action': 'put_obj_in_utensil(oven0)'}, {'timestamp': 21, 'action': 'bake(oven0)'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 23: <Chef> holds nothing. The planned sequence of actions (yet to be performed) for Chef is [] <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [wait(5)] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <blender0> is empty; <oven0> has baked_potato_slices; 3 counters can be visited by <Chef>. Their states are as follows: counters have nothing.
+",,nothing,nothing,,wait(5),<pot0> is empty,True,True,True,0,1,0.0,1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,24,deliver_soup(),wait(1),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       →0b     O       
+
+X       B       X       S       X       
+
+",0,baked_potato_slices,0,0,0,0,,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 4 partner completions: 3/4 correct.
+
+Successful Action History: [{'timestamp': 3, 'action': 'pickup(potato, ingredient_dispenser)'}, {'timestamp': 6, 'action': 'put_obj_in_utensil(chopping_board0)'}, {'timestamp': 7, 'action': 'cut(chopping_board0)'}, {'timestamp': 12, 'action': 'pickup(potato_slices, chopping_board0)'}, {'timestamp': 14, 'action': 'place_obj_on_counter()'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 24: <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] <Chef> holds one baked_potato_slices. The planned sequence of actions (yet to be performed) for Chef is [deliver_soup()] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Assistant>. Their states are as follows: counters have nothing.
+",one baked_potato_slices,nothing,deliver_soup(),,<pot0> is empty,True,False,False,1,0,1.0,-1.0,0.0,0.0,0,0,0,0,0,0,0
+1057013ede0059e7,25,deliver_soup(),wait(1),"X       X       X       P       X       
+
+I               X               X       
+
+C       →1      X               X       
+
+D               X       ↓0b     O       
+
+X       B       X       S       X       
+
+",20,baked_potato_slices,0,0,0,0,,,,"[ToM feedback]
+Your partner-prediction accuracy over the last 4 partner completions: 3/4 correct.
+
+Successful Action History: [{'timestamp': 3, 'action': 'pickup(potato, ingredient_dispenser)'}, {'timestamp': 6, 'action': 'put_obj_in_utensil(chopping_board0)'}, {'timestamp': 7, 'action': 'cut(chopping_board0)'}, {'timestamp': 12, 'action': 'pickup(potato_slices, chopping_board0)'}, {'timestamp': 14, 'action': 'place_obj_on_counter()'}]
+Lessons from Past Failures
+[]
+Chef space:pot0  oven0  counter 
+Assistant space:chopping_board0  blender0  dish_dispenser  ingredient_dispenser
+Order:baked_potato_slices
+Scene 25: <Assistant> holds nothing. The planned sequence of actions (yet to be performed) for Assistant is [] <Chef> holds one baked_potato_slices. The planned sequence of actions (yet to be performed) for Chef is [deliver_soup()] Kitchen states: <pot0> is empty; <chopping_board0> is empty; <oven0> is empty; <blender0> is empty; 3 counters can be visited by <Assistant>. Their states are as follows: counters have nothing.
+",one baked_potato_slices,nothing,deliver_soup(),,<pot0> is empty,False,False,False,1,0,0.0,0.0,0.0,0.0,0,0,0,0,0,0,0

@@ -1,0 +1,3 @@
+run_id,file_stem,source_path,order,order_level,success,total_score,horizon_len,p0_model,p1_model,p0_agent_type,p1_agent_type
+17339db63431d2be,experiment_2026-04-23_09-04-02_boiled_egg,/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/proagent_gpt-4o__baseline_claude-sonnet-4-20250514/boiled_egg/experiment_2026-04-23_09-04-02_boiled_egg.json,boiled_egg,level_1,False,0,5,gpt-4o,claude-sonnet-4-20250514,proagent,baseline
+ae3bb6f2daa53b15,experiment_2026-04-23_09-07-25_boiled_egg,/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/proagent_gpt-4o__baseline_claude-sonnet-4-20250514/boiled_egg/experiment_2026-04-23_09-07-25_boiled_egg.json,boiled_egg,level_1,True,20,17,gpt-4o,claude-sonnet-4-20250514,proagent,baseline

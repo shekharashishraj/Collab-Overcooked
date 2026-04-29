@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+src/openai_key.txt
 # C extensions
 *.so
 
@@ -163,3 +163,4 @@ src/batch_run.sh
 src/embedding_cache.json
 
 
+src/openai_key.txt
