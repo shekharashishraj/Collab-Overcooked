@@ -1,0 +1,2 @@
+source_file,order,order_level,success,total_score,orders_finished,num_timesteps,last_timestep,total_comm_tokens,total_llm_comm_calls,sum_p0_validator_errors,sum_p1_validator_errors,sum_p0_format_errors,sum_p1_format_errors,p0_model,p1_model
+/Users/ashishrajshekhar/Desktop/Collab-Overcooked/src/data/gpt-4o__claude-sonnet-4-20250514/baked_potato_slices/experiment_2026-04-23_08-01-39_baked_potato_slices.json,baked_potato_slices,level_2,True,20,baked_potato_slices,25,24,7857,13,4,1,0,0,gpt-4o,claude-sonnet-4-20250514

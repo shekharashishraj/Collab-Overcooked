@@ -10,12 +10,26 @@ from overcooked_ai_py.utils import load_dict_from_file, load_pickle
 
 
 from collab.collab import LLMAgents
+from collab.agents import AToMAgent, ProAgentLLM, ReflexionAgent
 
 from collections import defaultdict
 from collab.modules import EMBEDDING_MODEL
 
+AGENT_REGISTRY = {
+    "baseline": LLMAgents,
+    "proagent": ProAgentLLM,
+    "a-tom": AToMAgent,
+    "reflexion": ReflexionAgent,
+}
+
+
+def get_agent_class(agent_type: str):
+    return AGENT_REGISTRY.get((agent_type or "baseline").lower(), LLMAgents)
+
 
 def make_agent(alg: str, mdp, layout, **gptargs):
+    agent_type = gptargs.pop("agent_type", "baseline")
+    reflexion_memory_buffer = gptargs.pop("reflexion_memory_buffer", None)
 
     if alg == "Stay":
         agent = StayAgent()
@@ -41,7 +55,16 @@ def make_agent(alg: str, mdp, layout, **gptargs):
             mlam = MediumLevelPlanner.from_pickle_or_compute(
                 mdp, MLAM_PARAMS, force_compute=True
             ).ml_action_manager
-            agent = LLMAgents(mlam, layout, **gptargs)
+            cls = get_agent_class(agent_type)
+            if cls is ReflexionAgent:
+                agent = cls(
+                    mlam,
+                    layout,
+                    reflexion_memory_buffer=reflexion_memory_buffer,
+                    **gptargs,
+                )
+            else:
+                agent = cls(mlam, layout, **gptargs)
 
         elif alg == "Greedy":
             mlam = MediumLevelPlanner.from_pickle_or_compute(

@@ -1,0 +1,9 @@
+BELIEF TRACKING (ProAgent):
+Before your analysis, you must predict your partner's next completed medium-level action based on their recent behavior and the current state.
+After each timestep you will receive feedback comparing your prediction to what your partner actually finished.
+
+You MUST include this exact block before "{role} analysis:" in every planner reply (same role prefix as your other fields):
+
+{role} partner_prediction: [one line: predicted partner ML action, e.g. pick_up(ingredient_dispenser, onion) or wait(1), plus brief reasoning]
+
+Then continue with the normal {role} analysis / {role} plan / {role} say structure.

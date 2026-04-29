@@ -3,6 +3,7 @@ import datetime
 import os
 import json
 import datetime
+import re
 from argparse import ArgumentParser
 import numpy as np
 from rich import print as rprint
@@ -47,13 +48,55 @@ from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld, OvercookedS
 from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv
 from overcooked_ai_py.agents.agent import AgentGroup
 from overcooked_ai_py.mdp.actions import Action
-from collab.modules import statistics_dict, tokenizer,model, turn_statistics_dict
+from collab.modules import (
+    statistics_dict,
+    tokenizer,
+    model,
+    turn_statistics_dict,
+    reset_statistics_for_episode,
+)
+from collab.llm_providers import infer_provider
+from collab.collab import last_joint_timestep_planner_dialogues
 from collab.web_util import output_to_port, check_port_in_use, change_port
-import socket
 from utils import make_agent, get_example_embedding, combine_statistic_dict
+from collab.agents import ReflexionAgent
+
+
+def _sanitize_model_segment(name):
+    return re.sub(r"[^\w.\-]+", "_", str(name))[:80]
+
+
+def _save_models_dir_segment(variant):
+    m0 = variant.get("model_p0") or variant.get("gpt_model") or "unknown"
+    m1 = variant.get("model_p1") or variant.get("gpt_model") or "unknown"
+    a0 = variant.get("agent_p0", "baseline")
+    a1 = variant.get("agent_p1", "baseline")
+    a, b = _sanitize_model_segment(m0), _sanitize_model_segment(m1)
+    sa, sb = _sanitize_model_segment(a0), _sanitize_model_segment(a1)
+    left = f"{sa}_{a}" if sa else a
+    right = f"{sb}_{b}" if sb else b
+    return f"{left}__{right}" if left != right else left
+
+
+def _serialize_dialog(entries):
+    out = []
+    for e in entries or []:
+        if isinstance(e, dict):
+            out.append(
+                {
+                    "role": str(e.get("role", "")),
+                    "content": str(e.get("content", "")),
+                }
+            )
+    return out
 
 
 def main(variant):
+
+    if not variant.get("model_p0"):
+        variant["model_p0"] = variant["gpt_model"]
+    if not variant.get("model_p1"):
+        variant["model_p1"] = variant["gpt_model"]
 
     layout = variant['layout']
     horizon = variant['horizon']
@@ -80,6 +123,7 @@ def main(variant):
 
     start_time = time.time()
     results = []
+    variant.setdefault("_reflexion_buffers", {"0": [], "1": []})
 
     actor_list = ['chef','assistant']
     for i in range(episode):
@@ -87,11 +131,14 @@ def main(variant):
         actor_num = 0
         agents_list = []
 
+        reset_statistics_for_episode()
+
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        save_dir = f"{args.statistics_save_dir}/{args.gpt_model}/{args.order}"
+        models_seg = _save_models_dir_segment(variant)
+        save_dir = f"{variant['statistics_save_dir']}/{models_seg}/{variant['order']}"
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        filename = f"{save_dir}/experiment_{current_time}_{args.order}.json"
+        filename = f"{save_dir}/experiment_{current_time}_{variant['order']}.json"
 
         if mode == 'develop':
             """
@@ -124,23 +171,57 @@ def main(variant):
             break
 
         
+        human_any = (
+            variant.get("model_p0") == "human" or variant.get("model_p1") == "human"
+        )
+
         for alg in [p0_algo, p1_algo]:
             if alg == "LLMPair":
-                if mode!="human":
-                    assert variant['gpt_model']!=None, print(f'you should choose a gpt model')
+                if mode != "human":
+                    assert variant.get("gpt_model") is not None, print(
+                        "you should choose a gpt model (or set --model_p0 / --model_p1)"
+                    )
                 if mode == "OpenSource":
                     assert os.path.exists(variant['model_dirname']) is True, print(f"you should input right open-source model absolute path")
-                print(f"\n----Use {variant['gpt_model']}----\n")
-                if variant['gpt_model'] == "human":
-                    assert check_port_in_use(variant["local_server_api"]) is True,print(f"port {variant['local_server_api']} is busy")
+                agent_model = (
+                    variant["model_p0"] if actor_num == 0 else variant["model_p1"]
+                )
+                arch = (
+                    variant.get("agent_p0", "baseline")
+                    if actor_num == 0
+                    else variant.get("agent_p1", "baseline")
+                )
+                rbuf = (
+                    variant["_reflexion_buffers"][str(actor_num)]
+                    if arch == "reflexion"
+                    else None
+                )
+                print(
+                    f"\n----P{actor_num} ({actor_list[actor_num]}) model: {agent_model} | "
+                    f"agent_type: {arch}----\n"
+                )
+                if agent_model == "human":
+                    assert check_port_in_use(variant["local_server_api"]) is True, print(f"port {variant['local_server_api']} is busy")
                     change_port(variant["local_server_api"])
-                gpt_model = variant['gpt_model']
                 model_dirname = variant['model_dirname']
                 local_server_api = variant['local_server_api']
                 retrival_method = variant['retrival_method']
                 K = variant['K']
-                agent = make_agent(alg, mdp, layout, model=gpt_model, model_dirname=model_dirname,local_server_api=local_server_api,
-                                   retrival_method=retrival_method, K=K,actor=actor_list[actor_num])
+                agent = make_agent(
+                    alg,
+                    mdp,
+                    layout,
+                    model=agent_model,
+                    model_dirname=model_dirname,
+                    local_server_api=local_server_api,
+                    retrival_method=retrival_method,
+                    K=K,
+                    actor=actor_list[actor_num],
+                    openai_base_url=variant.get("openai_base_url"),
+                    anthropic_max_tokens=int(variant.get("anthropic_max_tokens", 4096)),
+                    agent_type=arch,
+                    reflexion_memory_buffer=rbuf,
+                )
             else:
                 agent = make_agent(alg, mdp, layout)
             agents_list.append(agent)
@@ -148,6 +229,34 @@ def main(variant):
 
         team = AgentGroup(*agents_list)
         team.reset()
+
+        def _agent_backend_meta(agent):
+            mid = getattr(agent, "model", None)
+            if mid is None:
+                return {"model": None, "provider": None}
+            return {"model": mid, "provider": infer_provider(mid)}
+
+        def _slot_agent_type(slot: int, algo: str):
+            if algo != "LLMPair":
+                return "human" if algo == "Human" else str(algo).lower()
+            return variant.get("agent_p0" if slot == 0 else "agent_p1", "baseline")
+
+        statistics_dict["agents"] = [
+            {
+                "player": "P0",
+                "index": 0,
+                "role": "chef",
+                "agent_type": _slot_agent_type(0, p0_algo),
+                **_agent_backend_meta(team.agents[0]),
+            },
+            {
+                "player": "P1",
+                "index": 1,
+                "role": "assistant",
+                "agent_type": _slot_agent_type(1, p1_algo),
+                **_agent_backend_meta(team.agents[1]),
+            },
+        ]
 
         env.reset()
         r_total = 0
@@ -159,10 +268,16 @@ def main(variant):
                 # print(s_t.timestep, env.t)
                 print(f'\n>>>>>>>>>>>>>time: {t}<<<<<<<<<<<<<<<<<<<<<\n')
                 map = env.mdp.state_string(s_t).replace('ø', 'o')
-                print(map)   
-                a_t, ingredient_for_pickup = team.joint_action(s_t) 
+                print(map)
+                last_joint_timestep_planner_dialogues[0] = []
+                last_joint_timestep_planner_dialogues[1] = []
+                a_t, ingredient_for_pickup = team.joint_action(s_t)
                 print(a_t)
-                dialogue_t = team.reset_dialogue()
+                dialogue_t = [
+                    copy.deepcopy(last_joint_timestep_planner_dialogues[0]),
+                    copy.deepcopy(last_joint_timestep_planner_dialogues[1]),
+                ]
+                team.reset_dialogue()
                 print(f"\n-----------Controller-----------\n")    
                 print(f"action: P0 {Action.to_char(a_t[0])} | P1 {Action.to_char(a_t[1])}")
                 parm = ingredient_for_pickup
@@ -191,12 +306,53 @@ def main(variant):
                 turn_statistics_dict_agent1 = team.agents[1].turn_statistics_dict
 
                 turn_statistics_dict_both = combine_statistic_dict(turn_statistics_dict_agent0,turn_statistics_dict_agent1,map,reward)
+                turn_statistics_dict_both["agent_models"] = [
+                    {
+                        "player": "P0",
+                        "role": "chef",
+                        "model": getattr(team.agents[0], "model", None),
+                        "agent_type": getattr(
+                            team.agents[0], "agent_type", _slot_agent_type(0, p0_algo)
+                        ),
+                        "provider": infer_provider(
+                            getattr(team.agents[0], "model", "") or ""
+                        ),
+                    },
+                    {
+                        "player": "P1",
+                        "role": "assistant",
+                        "model": getattr(team.agents[1], "model", None),
+                        "agent_type": getattr(
+                            team.agents[1], "agent_type", _slot_agent_type(1, p1_algo)
+                        ),
+                        "provider": infer_provider(
+                            getattr(team.agents[1], "model", "") or ""
+                        ),
+                    },
+                ]
 
                 statistics_dict['total_timestamp'].append(t)
                 statistics_dict['total_score'] = r_total
                 statistics_dict['total_action_list'][0] = team.agents[1].teammate_ml_actions
                 statistics_dict['total_action_list'][1] = team.agents[0].teammate_ml_actions
                 statistics_dict['content'].append(turn_statistics_dict_both)
+                statistics_dict["timestep_conversations"].append(
+                    {
+                        "timestep": t,
+                        "p0_role": "chef",
+                        "p1_role": "assistant",
+                        "p0_agent_type": _slot_agent_type(0, p0_algo),
+                        "p1_agent_type": _slot_agent_type(1, p1_algo),
+                        "p0_model": getattr(team.agents[0], "model", None),
+                        "p1_model": getattr(team.agents[1], "model", None),
+                        "p0_dialog": _serialize_dialog(
+                            dialogue_t[0] if dialogue_t else []
+                        ),
+                        "p1_dialog": _serialize_dialog(
+                            dialogue_t[1] if len(dialogue_t) > 1 else []
+                        ),
+                    }
+                )
                 #statistics_dict['end_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
                 with open(filename, 'w') as f:
                     json.dump(statistics_dict,f,indent=4)
@@ -205,14 +361,19 @@ def main(variant):
                     if reward != 0:
                         print("Task successed!")
                         #Human-eval: set task success message
-                        if variant['gpt_model'] == "human":
+                        if human_any:
                             for a in range(len(team.agents)):
                                 output_to_port(f"agent{a}","Success!",mission="success",port=variant['local_server_api'])
                         break
             #Human-eval: set task failed message
-            if variant['gpt_model'] == "human":
+            if human_any:
                 for a in range(len(team.agents)):
                     output_to_port(f"agent{a}","Fail to finish task in time!",mission="fail",port=variant['local_server_api'])
+            if mode == "exp":
+                snap = copy.deepcopy(statistics_dict)
+                for ag in team.agents:
+                    if isinstance(ag, ReflexionAgent):
+                        ag.generate_episode_reflection(snap)
         print(f"Episode {i+1}/{episode}: {r_total}\n====\n\n")
         results.append(r_total)
    
@@ -229,13 +390,32 @@ if __name__ == '__main__':
     parser.add_argument('--layout', '-l', type=str, default='new_env', choices=['new_env'])
     parser.add_argument('--p0',  type=str, default='LLMPair', choices=['LLMPair', 'Human'], help='Algorithm for P0 agent 0')
     parser.add_argument('--p1', type=str, default='LLMPair', choices=['LLMPair', 'Human'], help='Algorithm for P1 agent 1')
+    _agent_choices = ["baseline", "proagent", "a-tom", "reflexion"]
+    parser.add_argument(
+        "--agent_p0",
+        type=str,
+        default="baseline",
+        choices=_agent_choices,
+        help="Agent architecture for P0 when --p0 LLMPair (decoupled from --model_p0)",
+    )
+    parser.add_argument(
+        "--agent_p1",
+        type=str,
+        default="baseline",
+        choices=_agent_choices,
+        help="Agent architecture for P1 when --p1 LLMPair (decoupled from --model_p1)",
+    )
     parser.add_argument('--horizon', type=int, default=120, help='Horizon steps in one game')
     parser.add_argument('--episode', type=int, default=1, help='Number of episodes')
 
     # these parsers are only required when using LLMPair.
 
     # model:'gpt-3.5-turbo-0125', 'gpt-3.5-turbo', 'gpt-4', 'gpt-4o','gpt-o1mini','gpt4-turbo','llama3-8B','Llama-3.1-8B-Instruct','Llama-3.1-70B-Instruct',"Yi-1.2-34B","yi-lightning","yi-large",'yi-medium',"Qwen2.5-7B-Instruct","Qwen2.5-72B-Instruct","Qwen2.5-14B-Instruct","Qwen2.5-32B-Instruct",'claude3_sonnet'
-    parser.add_argument('--gpt_model', type=str, default='gpt-3.5-turbo-0125')
+    parser.add_argument('--gpt_model', type=str, default='gpt-3.5-turbo-0125', help='Default backbone for both players if --model_p0/--model_p1 omitted')
+    parser.add_argument('--model_p0', type=str, default=None, help='LLM id for P0 (chef); defaults to --gpt_model')
+    parser.add_argument('--model_p1', type=str, default=None, help='LLM id for P1 (assistant); defaults to --gpt_model')
+    parser.add_argument('--openai_base_url', type=str, default=None, help='Optional OpenAI-compatible API base URL (OpenAI official if unset)')
+    parser.add_argument('--anthropic_max_tokens', type=int, default=4096, help='Max output tokens for Anthropic Messages API')
     
     parser.add_argument('--retrival_method', type=str, default="recent_k", choices=['recent_k', 'bert_topk'], help='Use similarity-based(BERT, CLIP) retrieval or retrieve recent K history in dialog.')
     parser.add_argument('--K', type=int, default=0, help="The number of dialogues you want to retrieve.")
@@ -255,6 +435,10 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
+    if args.model_p0 is None:
+        args.model_p0 = args.gpt_model
+    if args.model_p1 is None:
+        args.model_p1 = args.gpt_model
     variant = vars(args)
 
     start_time = time.time()

@@ -14,6 +14,16 @@ from transformers import AutoTokenizer
 import openai
 from openai import OpenAI
 from .web_util import output_to_port, listen_to_server, username_record
+from .llm_providers import (
+    infer_provider,
+    build_openai_chat_kwargs,
+    extract_text,
+    anthropic_messages_create,
+    openai_output_token_estimate,
+    anthropic_output_token_count,
+    get_anthropic_api_key,
+    extract_human_port_response,
+)
 
 cwd = os.getcwd()
 gpt4_key_file = os.path.join(cwd, "openai_key.txt")
@@ -30,7 +40,19 @@ statistics_dict = {
     "total_score": 0,
     "total_action_list": [[], []],
     "content": [],
+    "timestep_conversations": [],
 }
+
+
+def reset_statistics_for_episode():
+    """Clear per-episode accumulators so each saved JSON is self-contained."""
+    statistics_dict["total_timestamp"] = []
+    statistics_dict["total_order_finished"] = []
+    statistics_dict["total_score"] = 0
+    statistics_dict["total_action_list"] = [[], []]
+    statistics_dict["content"] = []
+    statistics_dict["timestep_conversations"] = []
+    statistics_dict.pop("agents", None)
 
 # turn statistics
 turn_statistics_dict = {
@@ -90,14 +112,32 @@ TOKEN_LIMIT_TABLE = {
     "gpt-3.5-turbo": 4096,
     "gpt-3.5-turbo-0301": 4096,
     "gpt-3.5-turbo-16k": 16384,
+    "gpt-3.5-turbo-0125": 16384,
     "gpt-4": 8192,
     "gpt-4-0314": 8192,
     "gpt-4-32k": 32768,
     "gpt-4-32k-0314": 32768,
+    "gpt-4o": 128000,
+    "gpt-4o-2024-05-13": 128000,
     "llama3:70b-instruct-fp16": 4096,
 }
+DEFAULT_TOKEN_LIMIT = 128000
 sys.path.append(os.getcwd())
 EMBEDDING_MODEL = "text-embedding-3-small"
+
+
+def _output_token_count_tiktoken(text: str, model_hint: str = "gpt-4") -> int:
+    if model_hint == "p50k_base":
+        enc = tiktoken.get_encoding("p50k_base")
+        return len(enc.encode(text))
+    try:
+        enc = tiktoken.encoding_for_model(model_hint)
+    except Exception:
+        try:
+            enc = tiktoken.encoding_for_model("gpt-4")
+        except Exception:
+            enc = tiktoken.get_encoding("cl100k_base")
+    return len(enc.encode(text))
 
 
 class Module(object):
@@ -113,6 +153,8 @@ class Module(object):
         local_server_api="http://localhost:8000/v1",
         retrival_method="recent_k",
         K=3,
+        openai_base_url=None,
+        anthropic_max_tokens=4096,
     ):
 
         self.model = model
@@ -120,8 +162,11 @@ class Module(object):
         self.local_server_api = local_server_api
         self.retrival_method = retrival_method
         self.K = K
+        self.openai_base_url = openai_base_url
+        self.anthropic_max_tokens = int(anthropic_max_tokens)
 
-        self.chat_model = True if "gpt" in self.model else False
+        prov = infer_provider(self.model)
+        self.chat_model = prov in ("openai", "anthropic", "openai_compatible")
         self.instruction_head_list = role_messages
         # a dynamic changed dialog_history used for generating  different input for each failure
         self.dialog_history_list = []
@@ -185,16 +230,6 @@ class Module(object):
         rethink=False,
         map="",
     ):
-        # example should be sorted by its embedding with current input
-
-        if "gpt" in self.model or "deepseek" in self.model.lower():
-            openai.api_key = openai_key
-
-        # Open source models
-        else:
-            openai.api_base = self.local_server_api
-            openai.api_key = "token-abc123"
-
         rec = self.K
         messages = self.query_messages(rethink)
         self.cache_list = self.get_cache()
@@ -205,20 +240,26 @@ class Module(object):
             ] += " Based on the failure explanation and scene description, analyze and plan again."
 
         self.K = rec
-        response = None
+        provider = infer_provider(self.model)
 
         get_response = False
         retry_count = 0
+        rs = ""
+        token_count = 0
+        encoder_name = "gpt-4"
 
         while not get_response:
             if retry_count > 1:
-                rprint("[red][ERROR][/red]: Query GPT failed for over 3 times!")
+                rprint(
+                    f"[red][ERROR][/red]: LLM query failed for over 3 times "
+                    f"(model={self.model}, provider={infer_provider(self.model)})!"
+                )
                 self.current_user_message["content"] = self.current_user_message[
                     "content"
                 ][:-40]
                 return "", 0
             try:
-                if "human" in self.model:
+                if provider == "human":
                     if messages[-1]["content"].find("Suppose you are a Chef") != -1:
                         receiver = "agent0"
                     elif (
@@ -228,7 +269,6 @@ class Module(object):
                         receiver = "agent1"
                     else:
                         raise ValueError("Invalide role")
-                    # truncate message for user
                     input_part = messages[-1]["content"].find("<input>\n") + len(
                         "<input>\n"
                     )
@@ -240,7 +280,6 @@ class Module(object):
                         ) + len("<Recipe need to know>:\n")
                         recipe_end = messages[-1]["content"].find("**Skill**")
                         recipe = messages[-1]["content"][recipe_start:recipe_end]
-                    # find error
                     error = None
                     error_start = human_message.find(
                         "DO NOT COMMUNICATE WITH YOUR TEAMMATE :\n"
@@ -258,18 +297,13 @@ class Module(object):
                     response = output_to_port(
                         receiver, human_message, map=map, recipe=recipe, error=error
                     )
-                    # response = listen_to_server()
+                    rs = extract_human_port_response(response)
                     encoder_name = "gpt-3.5-turbo"
-
-                elif "gpt-3.5-turbo-0125" in self.model:
-                    client = OpenAI(api_key=openai.api_key)
-                    response = client.chat.completions.create(
-                        model=self.model, messages=messages, temperature=temperature
-                    )
-                    time.sleep(1)
-                    encoder_name = "gpt-3.5-turbo"
+                    token_count = _output_token_count_tiktoken(rs, encoder_name)
+                    get_response = True
 
                 elif self.model in ["text-davinci-003"]:
+                    openai.api_key = openai_key
                     prompt = convert_messages_to_prompt(messages)
                     response = openai.Completion.create(
                         model=self.model,
@@ -279,116 +313,93 @@ class Module(object):
                         max_tokens=256,
                     )
                     time.sleep(1)
+                    rs = extract_text(response, "openai")
+                    token_count = _output_token_count_tiktoken(rs, "p50k_base")
                     encoder_name = "p50k_base"
+                    get_response = True
 
-                elif "gpt-4o" == self.model:
-                    client = OpenAI(api_key=openai.api_key)
-                    response = client.chat.completions.create(
-                        model=self.model,  # home_path+"/models/"+self.model,
-                        messages=messages,
-                        temperature=temperature,
+                elif provider == "anthropic":
+                    from anthropic import Anthropic
+
+                    client = Anthropic(api_key=get_anthropic_api_key(cwd))
+                    response = anthropic_messages_create(
+                        client,
+                        self.model,
+                        messages,
+                        temperature,
+                        self.anthropic_max_tokens,
                     )
-                    response = response.to_dict()
-                    time.sleep(1)
-                    encoder_name = "gpt-4"
+                    time.sleep(0.2)
+                    rs = extract_text(response, "anthropic")
+                    n = anthropic_output_token_count(response)
+                    token_count = n if n > 0 else _output_token_count_tiktoken(rs)
+                    get_response = True
 
-                    encoder_name = "gpt-4"
-
-                elif "deepseek" in self.model.lower():
-                    client = OpenAI(api_key=openai.api_key, base_url=openai.api_base)
-                    response = client.chat.completions.create(
-                        model=self.model, messages=messages, temperature=temperature
+                elif provider == "openai":
+                    openai.api_key = openai_key
+                    base = self.openai_base_url or os.environ.get("OPENAI_BASE_URL")
+                    if "deepseek" in self.model.lower():
+                        base = base or os.environ.get(
+                            "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
+                        )
+                    client_kw = {"api_key": openai_key}
+                    if base:
+                        client_kw["base_url"] = base
+                    client = OpenAI(**client_kw)
+                    chat_kwargs = build_openai_chat_kwargs(
+                        self.model, messages, temperature
                     )
-                    time.sleep(1)
+                    response = client.chat.completions.create(**chat_kwargs)
+                    time.sleep(0.2)
+                    rs = extract_text(response, "openai")
+                    n = openai_output_token_estimate(response)
+                    token_count = (
+                        n if n is not None else _output_token_count_tiktoken(rs, self.model)
+                    )
                     encoder_name = "gpt-4"
+                    get_response = True
 
-                # Open source model, use vLLM
                 else:
-                    client = OpenAI(api_key=openai.api_key, base_url=openai.api_base)
+                    # OpenAI-compatible (vLLM, local servers)
+                    client = OpenAI(
+                        api_key="token-abc123", base_url=self.local_server_api
+                    )
                     response = client.chat.completions.create(
-                        model=self.model_dirname
-                        + self.model,  # home_path+"/models/"+self.model,
+                        model=self.model_dirname + self.model,
                         messages=messages,
                         temperature=temperature,
                     )
+                    time.sleep(0.2)
+                    rs = extract_text(response, "openai")
                     encoder_name = "llama3"
-
-                get_response = True
+                    tokenizer = AutoTokenizer.from_pretrained(
+                        "../lib/llama_tokenizer", local_files_only=True
+                    )
+                    token_count = len(tokenizer.encode(rs))
+                    get_response = True
 
             except Exception as e:
                 retry_count += 1
-                rprint("[red][OPENAI ERROR][/red]:", e)
+                rprint("[red][LLM ERROR][/red]:", e)
                 time.sleep(1)
 
-        rs = self.parse_response(response)
-        # count the number of tokens
-        if "gpt" in encoder_name:
-            encoding = tiktoken.encoding_for_model(encoder_name)
-            tokens = encoding.encode(rs)
-            token_count = len(tokens)
-        if "llama3" in encoder_name:
-            tokenizer = AutoTokenizer.from_pretrained(
-                "../lib/llama_tokenizer", local_files_only=True
-            )
-            tokens = tokenizer.encode(rs)
-            token_count = len(tokens)
         return rs, token_count
 
     def parse_response(self, response):
-        if self.model == "claude3_sonnet":
-            return response["content"][0]["text"]
-        elif self.model in ["text-davinci-003"]:
+        """Legacy helper for dict-shaped API responses; prefer extract_text in query."""
+        if self.model in ["text-davinci-003"]:
             return response["choices"][0]["text"]
-        elif self.model in [
-            "gpt-3.5-turbo-16k",
-            "gpt-3.5-turbo-0301",
-            "gpt-3.5-turbo",
-            "gpt-4o",
-        ]:
-            return response["choices"][0]["message"]["content"]
-        elif self.model in [
-            "gpt-4",
-            "gpt-4-0314",
-            "gpt-4o-2024-05-13",
-            "gpt-4o",
-            "gpt-o1mini",
-        ]:
-            return response["choices"][0]["content"]
-
-        elif self.model in [
-            "deepseek-reasoner",
-            "deepseek-chat",
-            "deepseek-ai/DeepSeek-R1",
-            "deepseek-ai/DeepSeek-V3",
-            "DeepSeek-R1",
-        ]:
-            return response.choices[0].message.content
-
-        elif "human" in self.model:
-            response_template = (
-                "{role} analysis: [NOTHING]\n{role} plan: {plan}\n{role} say: {say}"
-            )
-            if response["agent"] == "agent1":
-                role = "Assistant"
-            elif response["agent"] == "agent0":
-                role = "Chef"
-            else:
-                raise ValueError("Return invalide agent info!")
-            response_template = response_template.replace("{role}", role)
-            response_template = response_template.replace("{plan}", response["plan"])
-            response_template = response_template.replace(
-                "{say}", response["say"] if response["say"] != "" else "[NOTHING]"
-            )
-            return response_template
-        else:
-            return response.choices[0].message.content
+        prov = infer_provider(self.model)
+        if prov == "human" and isinstance(response, dict):
+            return extract_human_port_response(response)
+        return extract_text(response, prov if prov != "human" else "openai")
 
     def restrict_dialogue(self):
         """
         The limit on token length for gpt-3.5-turbo-0301 is 4096.
         If token length exceeds the limit, we will remove the oldest messages.
         """
-        limit = TOKEN_LIMIT_TABLE[self.model]
+        limit = TOKEN_LIMIT_TABLE.get(self.model, DEFAULT_TOKEN_LIMIT)
         print(f"Current token: {self.prompt_token_length}")
         while self.prompt_token_length >= limit:
             self.cache_list.pop(0)

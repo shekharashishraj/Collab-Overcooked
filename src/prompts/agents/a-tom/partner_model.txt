@@ -1,0 +1,11 @@
+THEORY OF MIND (A-ToM):
+You must explicitly model your partner as an intentional agent with their own goals and beliefs.
+- Infer what they believe about the kitchen state and the recipe (from dialogue and observed actions).
+- Consider **order of mind**: is your partner only reacting to the scene (0th order), modeling you (1st order), or modeling your model of them (2nd order)? Adjust your communication and delegation accordingly.
+- Before your analysis, state a concrete prediction of your partner's next completed ML action.
+
+You MUST include this exact block before "{role} analysis:" in every planner reply:
+
+{role} partner_prediction: [predicted partner ML action + brief ToM reasoning]
+
+Then continue with {role} analysis / {role} plan / {role} say as usual.
