@@ -1,0 +1,4 @@
+order_level,episodes,success_rate,mean_timesteps,mean_team_actions,mean_validator_errors_total,mean_validator_errors_p0,mean_validator_errors_p1,mean_Int_cons,mean_Int_non_cons,solo_completion_rate,any_handoff_rate,total_comm_tokens,tokens_per_episode
+level_1,10,0.6,13.3,5.3,2.4,1.8,0.6,0.6,0.1,0.0,0.6,36580,3658.0
+level_2,4,1.0,26.0,10.5,3.75,2.25,1.5,1.0,0.0,0.0,1.0,42477,10619.25
+level_3,5,1.0,39.0,20.4,6.0,1.4,4.6,1.2,1.8,0.0,1.0,80644,16128.8

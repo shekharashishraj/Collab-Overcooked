@@ -609,6 +609,8 @@ class Evaluation:
         agent0: check_recipe, pickup, put_obj_in_utensil, place_obj_on_counter, fill_dish_with_food, deliver_soup, utensil_operation
         agent1: pickup, place_obj_on_counter, put_obj_in_utensil, utensil_operation
         """
+        layout = read_layout_dict(self.layout_name)
+        open_layout = self.layout_name.endswith("_open")
         action_space_agent_0 = [
             "check_recipe()",
             "place_obj_on_counter()",
@@ -621,11 +623,17 @@ class Evaluation:
             "pickup(dish,counter)",
             "pickup(dish,dish_dispenser)",
         ]
+        if open_layout:
+            action_space_agent_0.append("pickup(dish,dish_dispenser)")
+            action_space_agent_1.extend(["fill_dish_with_food()", "deliver_soup()"])
 
-        pick_place_agent_0 = ["counter"]
+        pick_place_agent_0 = (
+            ["ingredient_dispenser", "dish_dispenser", "counter"]
+            if open_layout
+            else ["counter"]
+        )
         pick_place_agent_1 = ["ingredient_dispenser", "dish_dispenser", "counter"]
         # load utensil_operation
-        layout = read_layout_dict(self.layout_name)
         utensil_list = self.mdp.generate_utensil_list()
         for utensil, operation in layout["utensil_agent0"].items():
             for utensil_with_num in utensil_list:
@@ -645,9 +653,14 @@ class Evaluation:
                     action_space_agent_1.append(
                         f"put_obj_in_utensil({utensil_with_num})"
                     )
-                    action_space_agent_0.append(
-                        f"fill_dish_with_food({utensil_with_num})"
-                    )
+                    if open_layout:
+                        action_space_agent_1.append(
+                            f"fill_dish_with_food({utensil_with_num})"
+                        )
+                    else:
+                        action_space_agent_0.append(
+                            f"fill_dish_with_food({utensil_with_num})"
+                        )
                     pick_place_agent_1.append(utensil_with_num)
 
         # load ingredients, cooked food

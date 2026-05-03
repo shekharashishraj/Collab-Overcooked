@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 src/openai_key.txt
+src/anthropic_key.txt
+anthropic_key.txt
 # C extensions
 *.so
 
@@ -162,5 +164,8 @@ src/batch_run.sh
 
 src/embedding_cache.json
 
+# third_party: local reference clones (see third_party/README.md; do not commit)
+third_party/ProAgent/
+third_party/Adaptive-ToM/
 
 src/openai_key.txt

@@ -331,7 +331,7 @@ class Module(object):
                 elif provider == "anthropic":
                     from anthropic import Anthropic
 
-                    client = Anthropic(api_key=get_anthropic_api_key(cwd))
+                    client = Anthropic(api_key=get_anthropic_api_key())
                     response = anthropic_messages_create(
                         client,
                         self.model,

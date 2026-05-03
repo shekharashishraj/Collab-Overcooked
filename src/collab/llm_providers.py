@@ -10,20 +10,37 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 Provider = Literal["openai", "anthropic", "openai_compatible", "human"]
 
 
+def _anthropic_key_file_candidates(cwd: Optional[str] = None) -> List[str]:
+    """Paths to try for anthropic_key.txt (aligns with openai_key discovery in modules)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    src_dir = os.path.dirname(here)
+    repo_root = os.path.dirname(src_dir)
+    bases = [cwd or os.getcwd(), src_dir, repo_root]
+    out: List[str] = []
+    seen: set[str] = set()
+    for base in bases:
+        p = os.path.join(base, "anthropic_key.txt")
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
 def get_anthropic_api_key(cwd: Optional[str] = None) -> str:
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if key:
         return key
-    base = cwd or os.getcwd()
-    path = os.path.join(base, "anthropic_key.txt")
-    if os.path.isfile(path):
-        with open(path, "r") as f:
-            line = f.readline().strip()
-            if line:
-                return line
+    tried: List[str] = []
+    for path in _anthropic_key_file_candidates(cwd):
+        tried.append(path)
+        if os.path.isfile(path):
+            with open(path, "r") as f:
+                line = f.readline().strip()
+                if line:
+                    return line
     raise FileNotFoundError(
         "Anthropic API key not found: set ANTHROPIC_API_KEY or create anthropic_key.txt "
-        f"(tried {path})"
+        f"(tried: {', '.join(tried)})"
     )
 
 

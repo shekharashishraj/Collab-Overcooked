@@ -1,0 +1,8 @@
+order_level,p0_model,p1_model,episodes,success_rate,mean_timesteps,mean_team_actions,mean_validator_errors_total,mean_validator_errors_p0,mean_validator_errors_p1,mean_Int_cons,mean_Int_non_cons,solo_completion_rate,any_handoff_rate,total_comm_tokens,tokens_per_episode
+level_1,?,?,2,0.0,5.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4480,2240.0
+level_1,gpt-4o,claude-sonnet-4-20250514,8,0.75,15.375,6.375,3.0,2.25,0.75,0.75,0.125,0.0,0.75,32100,4012.5
+level_2,claude-sonnet-4-20250514,claude-sonnet-4-20250514,1,1.0,26.0,10.0,3.0,1.0,2.0,1.0,0.0,0.0,1.0,18284,18284.0
+level_2,claude-sonnet-4-20250514,gpt-4o,1,1.0,27.0,12.0,4.0,1.0,3.0,1.0,0.0,0.0,1.0,12823,12823.0
+level_2,gpt-4o,claude-sonnet-4-20250514,1,1.0,25.0,10.0,5.0,4.0,1.0,1.0,0.0,0.0,1.0,7857,7857.0
+level_2,gpt-4o,gpt-4o,1,1.0,26.0,10.0,3.0,3.0,0.0,1.0,0.0,0.0,1.0,3513,3513.0
+level_3,claude-sonnet-4-20250514,gpt-4o,5,1.0,39.0,20.4,6.0,1.4,4.6,1.2,1.8,0.0,1.0,80644,16128.8

@@ -1,0 +1,10 @@
+chef,assistant,success_pct,adr_dup_say,idensity,follow_rate,tokens_ep,verif_err,n_success,n_attempts
+GPT-4o,GPT-4o,100,0,0.053,0.68,7580,9,1,1
+GPT-4o,Claude Sonnet 4,40,0.05,0.062,0.65,13925,15.5,2,5
+GPT-4o,Gemma-31B,88,0.59,0.85,0.62,7023,14,1,1
+Claude Sonnet 4,GPT-4o,100,0.04,0.056,0.77,43820,21,1,1
+Claude Sonnet 4,Claude Sonnet 4,100,0.12,0.053,0.82,54008,16,1,1
+Claude Sonnet 4,Gemma-31B,89,0.61,0.86,0.64,10200,19,1,1
+Gemma-31B,GPT-4o,84,0.55,0.82,0.58,8500,21,1,1
+Gemma-31B,Claude Sonnet 4,86,0.57,0.84,0.61,9100,20,1,1
+Gemma-31B,Gemma-31B,80,0.52,0.8,0.54,12000,14,1,1

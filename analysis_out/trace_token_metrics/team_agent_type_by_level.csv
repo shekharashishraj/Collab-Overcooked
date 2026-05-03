@@ -1,0 +1,8 @@
+order_level,p0_agent_type,p1_agent_type,episodes,success_rate,mean_timesteps,mean_team_actions,mean_validator_errors_total,mean_validator_errors_p0,mean_validator_errors_p1,mean_Int_cons,mean_Int_non_cons,solo_completion_rate,any_handoff_rate,total_comm_tokens,tokens_per_episode
+level_1,?,?,4,0.25,7.75,2.5,1.25,1.0,0.25,0.25,0.0,0.0,0.25,9747,2436.75
+level_1,a-tom,a-tom,1,1.0,16.0,7.0,1.0,1.0,0.0,1.0,0.0,0.0,1.0,1416,1416.0
+level_1,proagent,baseline,2,0.5,11.0,4.0,2.0,1.0,1.0,0.5,0.0,0.0,0.5,9225,4612.5
+level_1,reflexion,reflexion,3,1.0,21.333333333333332,9.333333333333334,4.666666666666667,3.6666666666666665,1.0,1.0,0.3333333333333333,0.0,1.0,16192,5397.333333333333
+level_2,?,?,2,1.0,26.0,11.0,4.5,2.5,2.0,1.0,0.0,0.0,1.0,20680,10340.0
+level_2,a-tom,a-tom,2,1.0,26.0,10.0,3.0,2.0,1.0,1.0,0.0,0.0,1.0,21797,10898.5
+level_3,baseline,baseline,5,1.0,39.0,20.4,6.0,1.4,4.6,1.2,1.8,0.0,1.0,80644,16128.8

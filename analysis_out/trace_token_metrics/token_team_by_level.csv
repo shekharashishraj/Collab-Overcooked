@@ -1,0 +1,8 @@
+order_level,p0_model,p1_model,episodes,total_comm_tokens,tokens_per_episode
+level_1,?,?,2,4480,2240.0
+level_1,gpt-4o,claude-sonnet-4-20250514,8,32100,4012.5
+level_2,claude-sonnet-4-20250514,claude-sonnet-4-20250514,1,18284,18284.0
+level_2,claude-sonnet-4-20250514,gpt-4o,1,12823,12823.0
+level_2,gpt-4o,claude-sonnet-4-20250514,1,7857,7857.0
+level_2,gpt-4o,gpt-4o,1,3513,3513.0
+level_3,claude-sonnet-4-20250514,gpt-4o,5,80644,16128.8
