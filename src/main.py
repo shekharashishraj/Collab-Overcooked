@@ -59,7 +59,7 @@ from collab.llm_providers import infer_provider
 from collab.collab import last_joint_timestep_planner_dialogues
 from collab.web_util import output_to_port, check_port_in_use, change_port
 from utils import make_agent, get_example_embedding, combine_statistic_dict
-from collab.agents import ReflexionAgent
+from collab.agents import ReflexionAgent, team_belief_summary
 
 
 def _sanitize_model_segment(name):
@@ -365,6 +365,11 @@ def main(variant):
                             for a in range(len(team.agents)):
                                 output_to_port(f"agent{a}","Success!",mission="success",port=variant['local_server_api'])
                         break
+            statistics_dict["belief_metrics"] = team_belief_summary(
+                team.agents[0], team.agents[1]
+            )
+            with open(filename, "w") as f:
+                json.dump(statistics_dict, f, indent=4)
             #Human-eval: set task failed message
             if human_any:
                 for a in range(len(team.agents)):

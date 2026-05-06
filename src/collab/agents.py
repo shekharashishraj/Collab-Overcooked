@@ -91,6 +91,7 @@ class AToMAgent(LLMAgents):
         self.agent_type = "a-tom"
         self._tom_window = 12
         self.tom_accuracy = deque(maxlen=self._tom_window)
+        self.tom_event_log: list[dict] = []  # full-episode log (export / analysis)
         self._pending_partner_prediction = ""
         self._tom_feedback_line = ""
 
@@ -125,6 +126,14 @@ class AToMAgent(LLMAgents):
         pred_l, act_l = pred.lower(), actual_str.lower()
         ok = bool(pred) and (act_l in pred_l or pred_l in act_l)
         self.tom_accuracy.append(ok)
+        self.tom_event_log.append(
+            {
+                "timestep": state.timestep,
+                "prediction": pred,
+                "actual": actual_str,
+                "match": ok,
+            }
+        )
         correct = sum(1 for x in self.tom_accuracy if x)
         n = len(self.tom_accuracy)
         self._tom_feedback_line = (
@@ -200,3 +209,92 @@ class ReflexionAgent(LLMAgents):
         finally:
             self.planner.instruction_head_list = ih_backup
             self.planner.dialog_history_list = dh_backup
+
+
+def belief_metrics_for_agent(agent: LLMAgents, slot: int) -> dict:
+    """
+    Episode summary for partner-action prediction (belief / ToM scaffolding).
+    Written into experiment JSON under belief_metrics.
+    """
+    role = "chef" if slot == 0 else "assistant"
+    base = {
+        "player": f"P{slot}",
+        "role": role,
+        "agent_type": getattr(agent, "agent_type", "baseline"),
+        "model": getattr(agent, "model", None),
+    }
+
+    if isinstance(agent, ProAgentLLM):
+        bc = agent.belief_corrections
+        n = len(bc)
+        matches = sum(1 for x in bc if x.get("match"))
+        intents = getattr(agent, "teammate_intentions_dict", {}) or {}
+        base.update(
+            {
+                "framework": "proagent",
+                "instrumentation": "partner_prediction vs next partner ML completion",
+                "n_predictions_scored": n,
+                "n_correct": matches,
+                "accuracy": round(matches / n, 4) if n else None,
+                "n_timesteps_with_intention_logged": len(intents),
+                "events": bc,
+            }
+        )
+        return base
+
+    if isinstance(agent, AToMAgent):
+        events = getattr(agent, "tom_event_log", []) or []
+        n = len(events)
+        matches = sum(1 for x in events if x.get("match"))
+        window = list(agent.tom_accuracy)
+        wn = len(window)
+        wm = sum(1 for x in window if x)
+        base.update(
+            {
+                "framework": "a-tom",
+                "instrumentation": "partner_prediction vs next partner ML completion (stricter match than ProAgent)",
+                "rolling_window_maxlen": agent._tom_window,
+                "n_predictions_scored_episode": n,
+                "n_correct_episode": matches,
+                "accuracy_episode": round(matches / n, 4) if n else None,
+                "rolling_window_correct": wm,
+                "rolling_window_n": wn,
+                "rolling_accuracy": round(wm / wn, 4) if wn else None,
+                "events": events,
+            }
+        )
+        return base
+
+    base.update(
+        {
+            "framework": getattr(agent, "agent_type", "baseline"),
+            "instrumentation": None,
+            "note": "No partner_prediction belief hooks for baseline/reflexion in this codebase.",
+        }
+    )
+    return base
+
+
+def team_belief_summary(agent0: LLMAgents, agent1: LLMAgents) -> dict:
+    """Aggregate episode belief-tracking stats across both players."""
+    m0 = belief_metrics_for_agent(agent0, 0)
+    m1 = belief_metrics_for_agent(agent1, 1)
+
+    def acc(m: dict):
+        a = m.get("accuracy")
+        if a is None:
+            a = m.get("accuracy_episode")
+        return a
+
+    scores = [x for x in (acc(m0), acc(m1)) if x is not None]
+    out = {
+        "mean_accuracy_two_sided": round(sum(scores) / len(scores), 4)
+        if scores
+        else None,
+        "players_with_belief_metrics": sum(
+            1
+            for m in (m0, m1)
+            if m.get("n_predictions_scored") or m.get("n_predictions_scored_episode")
+        ),
+    }
+    return {"team": out, "per_player": [m0, m1]}
