@@ -1,0 +1,6 @@
+# Generated SFT JSONL — reproduce with `python src/training/extract_sft_data.py`
+data/*.jsonl
+
+# Caches and runtime outputs
+__pycache__/
+rollout_logs/

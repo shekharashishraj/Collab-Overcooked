@@ -1,0 +1,70 @@
+# Base + reference are the same LoRA-merged SFT checkpoint at the start of training.
+base_model: Qwen/Qwen2.5-7B-Instruct
+sft_adapter: ckpt/qwen7b-sft
+output_dir: ckpt/qwen7b-grpo
+ref_adapter: ckpt/qwen7b-sft  # frozen reference for KL
+
+# vLLM serving (used during rollouts only)
+vllm_server: http://localhost:8000/v1
+vllm_model_alias: qwen-policy
+
+# Rollout
+tasks:
+  - boiled_corn_slices
+  - boiled_green_bean_slices
+  - boiled_mushroom
+  - boiled_potato_slices
+  - boiled_sweet_potato
+  - baked_bell_pepper
+  - baked_carrot_soup
+  - baked_mushroom_soup
+  - baked_potato_soup
+  - baked_pumpkin_slices
+  - baked_pumpkin_soup
+  - baked_sweet_potato
+  - baked_bell_pepper_soup
+  - potato_carrot_and_onion_patty
+group_size: 4
+horizon: 30
+rollout_max_parallel: 8
+rollout_timeout_s: 600
+rollout_temperature: 0.9
+
+# RL
+outer_steps: 200
+inner_epochs: 1            # K=1 → on-policy REINFORCE-with-advantage, KL stays bounded
+learning_rate: 5.0e-6
+kl_beta: 0.04
+clip_ratio: 0.2            # used only if inner_epochs > 1
+grad_accumulation: 4
+max_grad_norm: 1.0
+max_seq_length: 4096
+train_micro_batch: 1       # micro per-step (one (prompt,response) pair)
+
+# LoRA on top of SFT adapter (continues SFT LoRA weights)
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.0
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# Reward weights (passed straight into reward.RewardWeights)
+reward:
+  w_succ: 1.0
+  w_time: 0.3
+  w_verr: 0.1
+  w_ferr: 0.1
+  w_red: 0.2
+  w_follow: 0.3
+agent_roles: [0, 1]        # train both roles in alternation per outer step
+
+# Checkpoints
+save_every: 10
+log_every: 1
+seed: 17
