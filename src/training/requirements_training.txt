@@ -1,0 +1,13 @@
+# Pin to versions known to compose on H200 / CUDA 12.x as of 2026-05
+torch>=2.4,<2.7
+transformers>=4.46,<4.51
+accelerate>=1.0,<1.5
+peft>=0.13,<0.16
+trl>=0.13,<0.18
+datasets>=3.0
+bitsandbytes>=0.44
+vllm>=0.6.3
+pyyaml
+trackio
+sentencepiece
+tiktoken

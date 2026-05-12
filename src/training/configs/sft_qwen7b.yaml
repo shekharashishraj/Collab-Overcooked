@@ -1,0 +1,42 @@
+model_name_or_path: Qwen/Qwen2.5-7B-Instruct
+trust_remote_code: true
+
+dataset_path: src/training/data/sft_qwen_all.jsonl
+eval_dataset_path: src/training/data/sft_qwen_heldout.jsonl
+output_dir: ckpt/qwen7b-sft
+
+# LoRA
+use_peft: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# Training
+bf16: true
+max_seq_length: 4096
+packing: false
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-4
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+weight_decay: 0.0
+num_train_epochs: 3
+logging_steps: 10
+eval_strategy: steps
+eval_steps: 200
+save_strategy: steps
+save_steps: 200
+save_total_limit: 3
+gradient_checkpointing: true
+report_to: none
+seed: 17
