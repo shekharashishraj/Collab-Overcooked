@@ -10,6 +10,30 @@ human-facing H200 runbook.
 
 ---
 
+## Target model: `Qwen/Qwen3.5-9B` (base)
+
+The default training target is the **base** Qwen3.5-9B checkpoint (no
+Instruct/Chat suffix). A few consequences:
+
+- **No chat template ships with the base tokenizer.** SFT installs Qwen's
+  standard ChatML template via `src/training/chat_template.py` and saves the
+  patched tokenizer alongside the LoRA adapter. vLLM (`serve_vllm.sh`) is
+  pointed at the adapter dir for the tokenizer so the same template is used
+  at rollout time.
+- **Thinking mode is disabled.** Qwen3 supports `<think>...</think>` blocks;
+  the SFT data (from GPT-4o) has no thinking traces, so we omit them from the
+  template to avoid teaching the model an unused token.
+- **Zero-shot baseline ≈ 0%.** Because there's no chat template out of the box,
+  the model can't follow our `{Role} analysis / plan / say` format until SFT
+  has run. Don't report a "Qwen3.5-9B baseline" without first running SFT.
+- **9B fits on H200 comfortably.** Full FT is possible; LoRA (the default) is
+  preferred for faster iteration. The reference model in `grpo_train.py`
+  co-locates on the same GPU.
+
+If the user asks to switch to an Instruct variant (e.g. `Qwen3.5-9B-Instruct`),
+the helper is idempotent — it leaves an existing chat template alone — so the
+only edit needed is `model_name_or_path` / `base_model` in the two YAML configs.
+
 ## Box assumptions
 
 - Single GPU: NVIDIA H200 (141 GB HBM3e), CUDA 12.x driver.
@@ -68,9 +92,9 @@ RL pipeline. The original README only requires it for some research utilities.
 ~/Collab-Overcooked/                  # repo root, $REPO
 ├── src/data/gpt-4o/...               # 119 expert trajectories (committed)
 ├── src/training/data/*.jsonl         # SFT corpus (regenerated, gitignored)
-├── ckpt/qwen7b-sft/                  # SFT LoRA adapter
-├── ckpt/qwen7b-grpo/step-*/          # GRPO checkpoints (every save_every outer steps)
-├── ckpt/qwen7b-grpo/final/           # final adapter
+├── ckpt/qwen3p5-9b-sft/                  # SFT LoRA adapter
+├── ckpt/qwen3p5-9b-grpo/step-*/          # GRPO checkpoints (every save_every outer steps)
+├── ckpt/qwen3p5-9b-grpo/final/           # final adapter
 ├── src/data/<run_tag>/...            # per-rollout output JSONs (cleanable)
 └── src/eval_result/...               # final per-task metric CSVs
 ```
@@ -101,15 +125,15 @@ python src/training/extract_sft_data.py
 
 # Smoke first: 100 steps in ~10 min
 python src/training/sft_train.py \
-    --config src/training/configs/sft_qwen7b.yaml \
+    --config src/training/configs/sft_qwen3p5_9b.yaml \
     --max_steps 100 \
-    --output_dir ckpt/qwen7b-sft-smoke
+    --output_dir ckpt/qwen3p5-9b-sft-smoke
 
 # Full SFT: ~6h
-python src/training/sft_train.py --config src/training/configs/sft_qwen7b.yaml
+python src/training/sft_train.py --config src/training/configs/sft_qwen3p5_9b.yaml
 ```
 
-Watch SFT progress: `tail -f ckpt/qwen7b-sft/trainer_state.json` and
+Watch SFT progress: `tail -f ckpt/qwen3p5-9b-sft/trainer_state.json` and
 `nvidia-smi -l 5`.
 
 ### Pane A (server) — vLLM with LoRA hot-reload
@@ -117,7 +141,7 @@ Watch SFT progress: `tail -f ckpt/qwen7b-sft/trainer_state.json` and
 ```bash
 conda activate collab-rl
 cd ~/Collab-Overcooked
-bash src/training/serve_vllm.sh ckpt/qwen7b-sft 8000
+bash src/training/serve_vllm.sh ckpt/qwen3p5-9b-sft 8000
 ```
 
 Verify it's up from pane 0:
@@ -137,14 +161,14 @@ cd ~/Collab-Overcooked
 
 # Smoke: one outer step, single task, group of 2 rollouts
 python src/training/grpo_train.py \
-    --config src/training/configs/grpo_qwen7b.yaml \
+    --config src/training/configs/grpo_qwen3p5_9b.yaml \
     --max_outer_steps 1 --tasks boiled_egg --group_size 2
 
 # Full GRPO: ~50h on H200
-python src/training/grpo_train.py --config src/training/configs/grpo_qwen7b.yaml
+python src/training/grpo_train.py --config src/training/configs/grpo_qwen3p5_9b.yaml
 ```
 
-Trainer logs land in `ckpt/qwen7b-grpo/train_log.jsonl` (one JSON per outer
+Trainer logs land in `ckpt/qwen3p5-9b-grpo/train_log.jsonl` (one JSON per outer
 step with reward/success/loss/KL for each role).
 
 ### Eval pass
@@ -152,7 +176,7 @@ step with reward/success/loss/KL for each role).
 When GRPO finishes, restart pane A pointing at the final adapter:
 
 ```bash
-bash src/training/serve_vllm.sh ckpt/qwen7b-grpo/final 8000
+bash src/training/serve_vllm.sh ckpt/qwen3p5-9b-grpo/final 8000
 ```
 
 Then in pane B:
@@ -205,9 +229,9 @@ when invoked on the H200 box.
 
 8. **Verify before claiming "training is working".** "Loss went down" is not
    evidence. The pipeline-level checks that count:
-   - SFT: sample from `ckpt/qwen7b-sft` on a held-out user prompt and check the
+   - SFT: sample from `ckpt/qwen3p5-9b-sft` on a held-out user prompt and check the
      output parses cleanly as `{Role} analysis: ... plan: ... say: ...`.
-   - GRPO: check `ckpt/qwen7b-grpo/train_log.jsonl` — `roleN_mean_success`
+   - GRPO: check `ckpt/qwen3p5-9b-grpo/train_log.jsonl` — `roleN_mean_success`
      must trend up across at least 10 outer steps before claiming RL is
      working.
    - Eval: actual L1/L2 SR numbers from `converted_data.csv`, not internal
@@ -239,7 +263,7 @@ conda env list | grep collab-rl                              # env exists
 which python && python --version                              # 3.11 on collab-rl
 python -c "import torch; print(torch.cuda.get_device_name(0))"  # H200 visible
 python -c "import trl, peft, vllm" && echo OK                 # stack installed
-test -f ckpt/qwen7b-sft/adapter_model.safetensors && echo "SFT done"
-test -f ckpt/qwen7b-grpo/final/adapter_model.safetensors && echo "GRPO done"
+test -f ckpt/qwen3p5-9b-sft/adapter_model.safetensors && echo "SFT done"
+test -f ckpt/qwen3p5-9b-grpo/final/adapter_model.safetensors && echo "GRPO done"
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/v1/models  # 200 = vLLM up, 000 = down
 ```

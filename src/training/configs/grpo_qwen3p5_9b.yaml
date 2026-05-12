@@ -1,8 +1,9 @@
 # Base + reference are the same LoRA-merged SFT checkpoint at the start of training.
-base_model: Qwen/Qwen2.5-7B-Instruct
-sft_adapter: ckpt/qwen7b-sft
-output_dir: ckpt/qwen7b-grpo
-ref_adapter: ckpt/qwen7b-sft  # frozen reference for KL
+base_model: Qwen/Qwen3.5-9B            # BASE model — chat template installed by sft_train.py and saved with the adapter
+sft_adapter: ckpt/qwen3p5-9b-sft
+output_dir: ckpt/qwen3p5-9b-grpo
+ref_adapter: ckpt/qwen3p5-9b-sft       # frozen reference for KL
+enable_thinking: false
 
 # vLLM serving (used during rollouts only)
 vllm_server: http://localhost:8000/v1

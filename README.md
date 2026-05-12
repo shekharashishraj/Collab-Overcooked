@@ -88,17 +88,19 @@ The environment settings and logic are stored in the `Collab-Overcooked/lib/over
 
 ## RL Training (SFT + GRPO) for Small Open-Source Models
 
-This fork ships an end-to-end pipeline to lift small open-source LLMs (e.g.
-**Qwen2.5-7B-Instruct**, baseline 8% L1 / 0% L2) toward closed-source-class
-performance, by distilling the project's GPT-4o trajectories and then doing
-on-policy RL against the Collab-Overcooked validator.
+This fork ships an end-to-end pipeline to lift small open-source LLMs toward
+closed-source-class performance, by distilling the project's GPT-4o trajectories
+and then doing on-policy RL against the Collab-Overcooked validator. The
+default target is **Qwen/Qwen3.5-9B (base model)**; for context, the
+*Overlooked in Overcooked* analysis reported Qwen2.5-7B-Instruct at only
+**8% L1 / 0% L2** Success Rate zero-shot.
 
 Pipeline lives under [`src/training/`](src/training/):
 
 | Stage | Script | What it does |
 |---|---|---|
 | 1a. Extract SFT data | `extract_sft_data.py` | Filters `data/gpt-4o/*/experiment_*.json` → ~5,800 chat-formatted (prompt, completion) pairs. |
-| 1b. SFT | `sft_train.py` | LoRA SFT (r=32, α=64) on Qwen2.5-7B-Instruct, 3 epochs, bf16. |
+| 1b. SFT | `sft_train.py` | LoRA SFT (r=32, α=64) on Qwen3.5-9B (base), 3 epochs, bf16. |
 | 2a. vLLM serve | `serve_vllm.sh` | Hosts the in-training adapter via vLLM `--enable-lora`. |
 | 2b. GRPO | `grpo_train.py` | Multi-turn GRPO loop: group-relative advantage + β·KL to frozen SFT ref. |
 | 3. Eval | `eval_trained.py` | Runs the trained policy, then delegates to the existing `evaluation.py` / `organize_result.py` / `convert_result.py`. |
@@ -128,7 +130,8 @@ bash src/training/run_pipeline.sh
 
 | Stage         | L1 SR target | L2 SR target |
 |---------------|--------------|--------------|
-| Baseline (zero-shot Qwen2.5-7B-Instruct) | 8%  | 0%  |
+| Reference (Qwen2.5-7B-Instruct, zero-shot, from *Overlooked*) | 8% | 0% |
+| Qwen3.5-9B base, zero-shot | ~0% (no chat template) | ~0% |
 | After SFT     | ≥ 35%        | ≥ 10%        |
 | After SFT + GRPO | ≥ 55%     | ≥ 25%        |
 

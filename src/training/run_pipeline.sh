@@ -41,8 +41,8 @@ SKIP_SMOKE="${SKIP_SMOKE:-0}"
 SKIP_GRPO="${SKIP_GRPO:-0}"
 SKIP_EVAL="${SKIP_EVAL:-0}"
 
-SFT_CFG="src/training/configs/sft_qwen7b.yaml"
-GRPO_CFG="src/training/configs/grpo_qwen7b.yaml"
+SFT_CFG="src/training/configs/sft_qwen3p5_9b.yaml"
+GRPO_CFG="src/training/configs/grpo_qwen3p5_9b.yaml"
 
 echo "=== [1/5] SFT data extraction ==="
 if [[ "$SKIP_EXTRACT" != "1" ]]; then
@@ -52,7 +52,7 @@ else
 fi
 
 echo
-echo "=== [2/5] LoRA SFT on Qwen2.5-7B-Instruct (H200, ~6h for 3 epochs) ==="
+echo "=== [2/5] LoRA SFT on Qwen/Qwen3.5-9B (base) (H200, ~8h for 3 epochs) ==="
 if [[ "$SKIP_SFT" != "1" ]]; then
   python src/training/sft_train.py --config "$SFT_CFG"
 else
@@ -61,7 +61,7 @@ fi
 
 echo
 echo "=== START VLLM IN ANOTHER SHELL NOW: ==="
-echo "    bash src/training/serve_vllm.sh ckpt/qwen7b-sft 8000"
+echo "    bash src/training/serve_vllm.sh ckpt/qwen3p5-9b-sft 8000"
 echo "Press ENTER to continue once vLLM is up and serving on :8000 ..."
 read -r _ignore
 
@@ -88,7 +88,7 @@ echo
 echo "=== [5/5] Final evaluation (L1 + L2, 10 episodes per task) ==="
 if [[ "$SKIP_EVAL" != "1" ]]; then
   # Point vLLM at the final GRPO adapter (manual restart of vLLM may be needed).
-  echo "[!] Restart vLLM with: bash src/training/serve_vllm.sh ckpt/qwen7b-grpo/final 8000"
+  echo "[!] Restart vLLM with: bash src/training/serve_vllm.sh ckpt/qwen3p5-9b-grpo/final 8000"
   echo "    Press ENTER when ready ..."
   read -r _ignore
   python src/training/eval_trained.py \
@@ -104,6 +104,6 @@ fi
 
 echo
 echo "=== DONE ==="
-echo "SFT adapter:    ckpt/qwen7b-sft"
-echo "GRPO adapter:   ckpt/qwen7b-grpo/final"
+echo "SFT adapter:    ckpt/qwen3p5-9b-sft"
+echo "GRPO adapter:   ckpt/qwen3p5-9b-grpo/final"
 echo "Eval CSVs:      src/eval_result/converted_data.csv  +  src/eval_result/statistics_data.csv"
