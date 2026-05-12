@@ -86,6 +86,57 @@ The environment settings and logic are stored in the `Collab-Overcooked/lib/over
 - If you need to add new interactive elements, ensure that you update the environment logic accordingly.
 
 
+## RL Training (SFT + GRPO) for Small Open-Source Models
+
+This fork ships an end-to-end pipeline to lift small open-source LLMs (e.g.
+**Qwen2.5-7B-Instruct**, baseline 8% L1 / 0% L2) toward closed-source-class
+performance, by distilling the project's GPT-4o trajectories and then doing
+on-policy RL against the Collab-Overcooked validator.
+
+Pipeline lives under [`src/training/`](src/training/):
+
+| Stage | Script | What it does |
+|---|---|---|
+| 1a. Extract SFT data | `extract_sft_data.py` | Filters `data/gpt-4o/*/experiment_*.json` → ~5,800 chat-formatted (prompt, completion) pairs. |
+| 1b. SFT | `sft_train.py` | LoRA SFT (r=32, α=64) on Qwen2.5-7B-Instruct, 3 epochs, bf16. |
+| 2a. vLLM serve | `serve_vllm.sh` | Hosts the in-training adapter via vLLM `--enable-lora`. |
+| 2b. GRPO | `grpo_train.py` | Multi-turn GRPO loop: group-relative advantage + β·KL to frozen SFT ref. |
+| 3. Eval | `eval_trained.py` | Runs the trained policy, then delegates to the existing `evaluation.py` / `organize_result.py` / `convert_result.py`. |
+
+The trainer **does not modify** `src/main.py`, `src/collab/collab.py`, or
+`src/evaluation.py` — it spawns the existing rollout loop as a subprocess and
+swaps the LoRA adapter on the running vLLM server between outer steps.
+
+### Quick start
+
+Designed for a single **H200 (141 GB HBM3e)** in an isolated `collab-rl`
+conda env. See [`src/training/README.md`](src/training/README.md) for the
+detailed flow and [`CLAUDE.md`](CLAUDE.md) for the H200-specific operator guide.
+
+```bash
+# One-shot setup (see CLAUDE.md for the per-flag rationale)
+conda create -n collab-rl python=3.11 -y && conda activate collab-rl
+pip install -r requirements.txt
+pip install -e lib/overcooked_ai
+pip install -r src/training/requirements_training.txt
+
+# Run the whole pipeline (resumable via SKIP_* env vars)
+bash src/training/run_pipeline.sh
+```
+
+### Targets
+
+| Stage         | L1 SR target | L2 SR target |
+|---------------|--------------|--------------|
+| Baseline (zero-shot Qwen2.5-7B-Instruct) | 8%  | 0%  |
+| After SFT     | ≥ 35%        | ≥ 10%        |
+| After SFT + GRPO | ≥ 55%     | ≥ 25%        |
+
+GRPO also targets coordination-quality metrics motivated by the
+*Beyond Task Success* / NExT-Game 2026 analysis: ADR ≥ 0.5, FollowRate ≥ 0.65
+in self-play, and any positive ZSC transfer when paired with GPT-4o.
+
+
 ## Reference
 ```bibtex
 @inproceedings{sun-etal-2025-collab,

@@ -1,8 +1,11 @@
 # RL Training Pipeline for Collab-Overcooked SLMs
 
 Two-stage pipeline to lift Qwen2.5-7B-Instruct from ~8% / 0% Success Rate at L1
-/ L2 toward closed-source-class performance, using your existing 119 successful
-GPT-4o trajectories.
+/ L2 toward closed-source-class performance, using the existing 119 successful
+GPT-4o trajectories in [`src/data/gpt-4o/`](../data/gpt-4o/).
+
+For the H200 operator workflow (background processes, tmux, GPU sharing), see
+[`../../CLAUDE.md`](../../CLAUDE.md).
 
 ## What's in this folder
 
@@ -15,20 +18,35 @@ src/training/
 ├── grpo_train.py          # custom GRPO loop (multi-turn, group-relative advantage)
 ├── eval_trained.py        # delegates to src/evaluation.py + adds reward.py columns
 ├── serve_vllm.sh          # vLLM launcher with --enable-lora
-├── run_pipeline.sh        # end-to-end orchestrator
+├── run_pipeline.sh        # end-to-end orchestrator (resumable via SKIP_* env vars)
 ├── configs/
 │   ├── sft_qwen7b.yaml
 │   └── grpo_qwen7b.yaml
-└── data/                  # populated by extract_sft_data.py
+└── data/                  # populated by extract_sft_data.py (gitignored)
 ```
 
-## Setup (once, on the H200 box)
+## Setup — isolated conda env on H200
+
+The original project pins **Python 3.8**, but Qwen2.5 / TRL / vLLM ≥ 0.6 need
+**Python ≥ 3.10**. Use a fresh env so the training stack does not collide with
+any existing `collab-overcooked` installation.
 
 ```bash
-conda activate collab-overcooked
+# 1. Fresh env
+conda create -n collab-rl python=3.11 -y
+conda activate collab-rl
+
+# 2. Base project deps + overcooked_ai
+pip install -r requirements.txt
+pip install -e lib/overcooked_ai
+
+# 3. Training-stack deps (Torch / TRL / PEFT / vLLM)
 pip install -r src/training/requirements_training.txt
 
-# Smoke-test the existing rollout loop still works.
+# 4. CUDA visibility check — should print the H200
+python -c "import torch; print(torch.cuda.get_device_name(0))"
+
+# 5. Smoke-test the existing rollout still runs end-to-end
 cd src && python main.py --horizon 3 --order boiled_egg --gpt_model gpt-3.5-turbo-0125
 cd ..
 ```
@@ -40,7 +58,7 @@ python src/training/extract_sft_data.py
 # expect: ~5800 train pairs, ~840 holdout pairs (boiled_egg + baked_potato_slices)
 
 python src/training/sft_train.py --config src/training/configs/sft_qwen7b.yaml
-# saves LoRA adapter -> ckpt/qwen7b-sft
+# saves LoRA adapter -> ckpt/qwen7b-sft  (≈6h for 3 epochs on H200)
 ```
 
 Smoke variant — 100 steps, ~10 minutes:
@@ -53,19 +71,24 @@ python src/training/sft_train.py \
 
 ## Stage 2 — vLLM server + GRPO
 
-In one shell:
+Two long-running processes share the H200. Run them in **separate tmux panes**
+(or one of them via `nohup &`). The vLLM server caps its memory at 0.55 of the
+H200 so the trainer's reference + policy fit alongside.
+
+Pane A:
 ```bash
 bash src/training/serve_vllm.sh ckpt/qwen7b-sft 8000
 ```
 
-In another shell:
+Pane B:
 ```bash
 python src/training/grpo_train.py --config src/training/configs/grpo_qwen7b.yaml
 # saves -> ckpt/qwen7b-grpo/step-{10,20,...}  and ckpt/qwen7b-grpo/final
 ```
 
-GRPO is the dominant cost (~50h for 200 outer steps with 14 tasks × 4 seeds).
-Bring it down by reducing `tasks` and `outer_steps` in the config for a first run.
+GRPO is the dominant cost (~50h for 200 outer steps × 14 tasks × G=4 rollouts).
+First-pass tuning: drop `outer_steps` to 30 and `tasks` to 4 in the config to
+get end-to-end timing data before committing to the full run.
 
 Hot-reloading the LoRA adapter on a live vLLM (requires
 `VLLM_ALLOW_RUNTIME_LORA_UPDATING=1` — already set by `serve_vllm.sh`) is
@@ -75,12 +98,12 @@ between checkpoints.
 
 ## Stage 3 — Evaluation
 
-Point vLLM at the final adapter (restart it):
+Point vLLM at the final adapter (restart pane A):
 ```bash
 bash src/training/serve_vllm.sh ckpt/qwen7b-grpo/final 8000
 ```
 
-Then:
+Then in pane B:
 ```bash
 python src/training/eval_trained.py \
     --policy qwen-policy \
@@ -94,9 +117,9 @@ cd src && python organize_result.py && python convert_result.py
 
 You get:
 - `src/eval_result/converted_data.csv` — level-aggregated SR / F1 / similarity / redundancy / initiate_collaboration / respond_collaboration (the official numbers).
-- `src/eval_result/<tag>_summary.json` — our additional reward.py columns (`reward_chef`, `reward_assistant`, `follow_*`, `verr_*`).
+- `src/eval_result/<tag>_summary.json` — additional reward.py columns (`reward_chef`, `reward_assistant`, `follow_*`, `verr_*`).
 
-## Targets (from the project plan)
+## Targets
 
 | Stage         | L1 SR target | L2 SR target | Notes |
 |---------------|--------------|--------------|-------|
@@ -104,14 +127,29 @@ You get:
 | After SFT     | ≥ 35%        | ≥ 10%        | Pure behavior cloning on 5.8k pairs |
 | After GRPO    | ≥ 55%        | ≥ 25%        | Plus ADR ≥ 0.5, FollowRate ≥ 0.65 in self-play |
 
-If GRPO underperforms SFT, increase `reward.w_verr` and `reward.w_red` in the
-GRPO config so dense per-step signals dominate the sparse success reward.
+If GRPO underperforms SFT, increase `reward.w_verr` and `reward.w_red` in
+`configs/grpo_qwen7b.yaml` so dense per-step signals dominate the sparse
+success reward.
+
+## Resuming after a crash
+
+Each stage of `run_pipeline.sh` is gated by a `SKIP_*` env var:
+
+```bash
+SKIP_EXTRACT=1 SKIP_SFT=1 bash src/training/run_pipeline.sh   # only smoke + GRPO + eval
+SKIP_EXTRACT=1 SKIP_SFT=1 SKIP_GRPO=1 bash src/training/run_pipeline.sh   # eval only
+```
+
+`grpo_train.py` itself resumes from the latest checkpoint under `ckpt/qwen7b-grpo/`
+if you pass `--config` pointing at the same `output_dir`. Just edit the config's
+`sft_adapter` to the last saved step and re-run.
 
 ## Reusing for Llama-3.1-8B
 
 Change `base_model` in both YAMLs to `meta-llama/Llama-3.1-8B-Instruct` and
 re-run. The data is model-agnostic; the LoRA target modules are the same names
-on Llama.
+on Llama. Expect comparable SFT timing and slightly worse GRPO sample
+efficiency (Llama-3.1 has a weaker tool-use prior than Qwen2.5).
 
 ## Known sharp edges
 
@@ -128,3 +166,5 @@ on Llama.
 - `prompts/recipe` lookup in `extract_sft_data.py` is by case-insensitive
   substring; if you add a new task whose name is a prefix of another, fix the
   match in `_load_recipe`.
+- `openai_key.txt` is read at import time by `src/collab/modules.py`.
+  `rollout_env.py` writes a stub key if missing — safe to ignore the warning.
