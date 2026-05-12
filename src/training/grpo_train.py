@@ -36,6 +36,7 @@ import sys
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "src"))
 
+from training.chat_template import ensure_chat_template  # noqa: E402
 from training.reward import RewardWeights, compute_episode_reward  # noqa: E402
 from training.rollout_env import (  # noqa: E402
     RolloutResult,
@@ -187,14 +188,22 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[grpo] device = {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(cfg["base_model"], trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    # Prefer the tokenizer saved alongside the SFT adapter — it has the ChatML
+    # template installed by sft_train.py. Fall back to the base tokenizer only
+    # if the SFT folder predates this fix.
+    sft_dir = cfg["sft_adapter"]
+    tok_src = sft_dir if (Path(sft_dir) / "tokenizer_config.json").exists() else cfg["base_model"]
+    print(f"[grpo] loading tokenizer from {tok_src}")
+    tokenizer = AutoTokenizer.from_pretrained(tok_src, trust_remote_code=True)
+    ensure_chat_template(tokenizer)  # idempotent if already set
 
     print(f"[grpo] loading base model {cfg['base_model']} ...")
     base = AutoModelForCausalLM.from_pretrained(
         cfg["base_model"], torch_dtype=torch.bfloat16, trust_remote_code=True
     )
+    if len(tokenizer) != base.get_input_embeddings().weight.shape[0]:
+        print(f"[grpo] resizing base embeddings: {base.get_input_embeddings().weight.shape[0]} -> {len(tokenizer)}")
+        base.resize_token_embeddings(len(tokenizer))
     base.gradient_checkpointing_enable()
     base.to(device)
 
@@ -209,6 +218,8 @@ def main():
     ref_base = AutoModelForCausalLM.from_pretrained(
         cfg["base_model"], torch_dtype=torch.bfloat16, trust_remote_code=True
     )
+    if len(tokenizer) != ref_base.get_input_embeddings().weight.shape[0]:
+        ref_base.resize_token_embeddings(len(tokenizer))
     ref_base.to(device)
     ref = PeftModel.from_pretrained(ref_base, cfg["ref_adapter"])
     for p in ref.parameters():

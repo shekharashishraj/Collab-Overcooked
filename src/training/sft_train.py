@@ -1,10 +1,12 @@
-"""Stage 1: LoRA SFT of Qwen2.5-7B-Instruct on filtered GPT-4o trajectories.
+"""Stage 1: LoRA SFT of Qwen3.5-9B (base) on filtered GPT-4o trajectories.
 
-Loads the JSONL produced by extract_sft_data.py (messages format), applies the
-Qwen2.5 chat template, and trains LoRA adapters with TRL's SFTTrainer.
+The base tokenizer has no chat template, so we install Qwen's standard ChatML
+template via training.chat_template.ensure_chat_template before tokenizing.
+The patched tokenizer is saved alongside the LoRA adapter so vLLM can serve
+the same template at rollout time.
 
 Usage:
-    python src/training/sft_train.py --config src/training/configs/sft_qwen7b.yaml
+    python src/training/sft_train.py --config src/training/configs/sft_qwen3p5_9b.yaml
 """
 
 import argparse
@@ -14,8 +16,12 @@ from pathlib import Path
 import yaml
 from datasets import load_dataset
 from peft import LoraConfig
-from transformers import AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from training.chat_template import ensure_chat_template  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -51,8 +57,20 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(
         model_id, trust_remote_code=cfg.get("trust_remote_code", True)
     )
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    template_changed = ensure_chat_template(tokenizer)
+    if template_changed:
+        print(f"[sft_train] installed Qwen ChatML template (no-think) on tokenizer; vocab now {len(tokenizer)}")
+
+    # Pre-load the model so we can resize embeddings if ChatML tokens were added.
+    # SFTTrainer would otherwise auto-load the model and miss the new tokens.
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        trust_remote_code=cfg.get("trust_remote_code", True),
+        torch_dtype="auto",
+    )
+    if len(tokenizer) != model.get_input_embeddings().weight.shape[0]:
+        print(f"[sft_train] resizing token embeddings: {model.get_input_embeddings().weight.shape[0]} -> {len(tokenizer)}")
+        model.resize_token_embeddings(len(tokenizer))
 
     train_path = str(REPO / cfg["dataset_path"])
     eval_path = str(REPO / cfg["eval_dataset_path"])
@@ -103,7 +121,7 @@ def main():
     sft_config = SFTConfig(**sft_cfg_kwargs)
 
     trainer = SFTTrainer(
-        model=model_id,
+        model=model,
         args=sft_config,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
@@ -113,8 +131,10 @@ def main():
 
     trainer.train()
     trainer.save_model(output_dir)
+    # Save the tokenizer with the installed chat template so vLLM picks it up
+    # when serving the adapter.
     tokenizer.save_pretrained(output_dir)
-    print(f"[sft_train] Saved LoRA adapter + tokenizer to {output_dir}")
+    print(f"[sft_train] Saved LoRA adapter + tokenizer (with chat template) to {output_dir}")
 
 
 if __name__ == "__main__":

@@ -196,7 +196,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", default="boiled_egg")
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--model", default="Qwen2.5-7B-Instruct")
+    ap.add_argument("--model", default="qwen-policy")
     ap.add_argument("--server", default="http://localhost:8000/v1")
     ap.add_argument("--horizon", type=int, default=30)
     ap.add_argument("--timeout", type=int, default=600)

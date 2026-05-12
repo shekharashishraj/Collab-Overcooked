@@ -1,9 +1,10 @@
-model_name_or_path: Qwen/Qwen2.5-7B-Instruct
+model_name_or_path: Qwen/Qwen3.5-9B   # BASE model — no chat template by default; sft_train.py installs Qwen's standard one
 trust_remote_code: true
+enable_thinking: false                  # Qwen3 thinking-mode tags; off because our SFT data has no <think> traces
 
 dataset_path: src/training/data/sft_qwen_all.jsonl
 eval_dataset_path: src/training/data/sft_qwen_heldout.jsonl
-output_dir: ckpt/qwen7b-sft
+output_dir: ckpt/qwen3p5-9b-sft
 
 # LoRA
 use_peft: true
@@ -23,9 +24,9 @@ lora_target_modules:
 bf16: true
 max_seq_length: 4096
 packing: false
-per_device_train_batch_size: 4
+per_device_train_batch_size: 4         # H200 fits 9B + LoRA + 4×4096 ctx comfortably in bf16
 per_device_eval_batch_size: 4
-gradient_accumulation_steps: 8
+gradient_accumulation_steps: 8         # effective batch = 32
 learning_rate: 1.0e-4
 lr_scheduler_type: cosine
 warmup_ratio: 0.03
